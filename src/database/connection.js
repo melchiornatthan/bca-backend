@@ -1,21 +1,9 @@
-const {
-    Client
-} = require('pg');
+const Sequelize = require('sequelize');
 
-const db = new Client({
-    user: 'melchiornatthan',
-    host: 'localhost',
-    database: 'postgres',
-    password: '',
-    port: 5432,
+const sequelize = new Sequelize('bca', 'melchiornatthan', '', {
+  host: 'localhost', // Change this to your database host
+  dialect: 'postgres', // Use 'mysql' for MySQL, 'sqlite' for SQLite, etc.
 });
 
-db.connect((err) => {
-    if (err) {
-        console.log(err);
-    } else {
-        console.log('Connected to the database');
-    }
-});
 
-module.exports = db;
+module.exports = sequelize;

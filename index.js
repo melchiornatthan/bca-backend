@@ -9,6 +9,7 @@ const session = require("express-session");
 const cors = require("cors");
 const passport = require("passport");
 const local = require("./src/middlewares/local");
+const sequelize = require("./src/database/connection");
 const store = new session.MemoryStore();
 const todoRoutes = require("./src/router/router");
 
@@ -48,6 +49,15 @@ app.get("/", (req, res) => {
     res.send("Not logged in");
   }
 });
+
+sequelize.sync()
+  .then(() => {
+    console.log('Database synchronized.');
+    // Your application logic here
+  })
+  .catch((error) => {
+    console.error('Error synchronizing database:', error);
+  });
 
 app.use("/bca-app", todoRoutes);
 

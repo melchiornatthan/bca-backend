@@ -2,6 +2,7 @@ const sequelize = require('../database/connection');
 const Sequelize = require('sequelize');
 const Location = require('./locations');
 const Provider = require('./provider');
+const Sla = require('./sla');
 
 const Coverage = sequelize.define('coverage', {
     id_loc: {

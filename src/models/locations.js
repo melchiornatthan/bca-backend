@@ -11,6 +11,7 @@ const Location = sequelize.define('locations', {
     location: {
       type: Sequelize.STRING,
       allowNull: false,
+      unique: true,
     }},{
         timestamps: false,
     });

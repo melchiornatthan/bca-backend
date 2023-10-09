@@ -26,7 +26,8 @@ const Price = sequelize.define('prices', {
     }},{
         timestamps: false,
     });
+    
     Price.belongsTo(Location, { foreignKey: 'id_loc' });
-Price.belongsTo(Provider, { foreignKey: 'id_prov' });
+    Price.belongsTo(Provider, { foreignKey: 'id_prov' });
 
     module.exports = Price;

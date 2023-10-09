@@ -12,6 +12,7 @@ const Provider = sequelize.define('providers', {
     provider: {
       type: Sequelize.STRING,
       allowNull: false,
+      unique: true,
     }},{
         timestamps: false,
     });

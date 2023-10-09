@@ -3,7 +3,6 @@
  */
 const LocalStrategy = require("passport-local");
 const passport = require("passport");
-const db = require("../database/connection");
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 

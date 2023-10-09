@@ -1,4 +1,3 @@
-
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const Provider = require("../models/provider");
@@ -8,9 +7,14 @@ const Coverage = require("../models/coverage");
 const Price = require("../models/price");
 const sequelize = require("../database/connection");
 
-
-//melakukan register akun ke table user
-async function register(body) {
+/**
+ * Register a new user.
+ *
+ * @param {Object} body - The request body containing 'username' and 'password'.
+ * @returns {Object} A success message if the user is registered successfully.
+ * @throws {Error} If there are issues with user registration.
+ */
+async function registerUser(body) {
   const { username, password } = body;
 
   try {
@@ -29,7 +33,14 @@ async function register(body) {
   }
 }
 
-async function login(body) {
+/**
+ * Authenticate and log in a user.
+ *
+ * @param {Object} body - The request body containing 'username' and 'password'.
+ * @returns {Object} A success message if the user is logged in successfully.
+ * @throws {Error} If there are issues with user authentication or login.
+ */
+async function loginUser(body) {
   const { username, password } = body;
 
   try {
@@ -52,7 +63,14 @@ async function login(body) {
     throw new Error("Error logging in");
   }
 }
-async function getlocations() {
+
+/**
+ * Get a list of locations.
+ *
+ * @returns {Object} A list of locations.
+ * @throws {Error} If there are issues with retrieving locations.
+ */
+async function getLocations() {
   try {
     const locations = await Location.findAll();
 
@@ -66,7 +84,13 @@ async function getlocations() {
   }
 }
 
-async function getsla() {
+/**
+ * Get a list of SLA data.
+ *
+ * @returns {Object} A list of SLA data.
+ * @throws {Error} If there are issues with retrieving SLA data.
+ */
+async function getSLAData() {
   try {
     const slaList = await Sla.findAll({
       include: [
@@ -94,8 +118,13 @@ async function getsla() {
   }
 }
 
-
-async function getcoverage() {
+/**
+ * Get a list of coverage data.
+ *
+ * @returns {Object} A list of coverage data.
+ * @throws {Error} If there are issues with retrieving coverage data.
+ */
+async function getCoverageData() {
   try {
     const coverageList = await Coverage.findAll({
       include: [
@@ -123,7 +152,13 @@ async function getcoverage() {
   }
 }
 
-async function getprices() {
+/**
+ * Get a list of price data.
+ *
+ * @returns {Object} A list of price data.
+ * @throws {Error} If there are issues with retrieving price data.
+ */
+async function getPriceData() {
   try {
     const priceList = await Price.findAll({
       include: [
@@ -151,7 +186,13 @@ async function getprices() {
   }
 }
 
-async function getproviders() {
+/**
+ * Get a list of providers.
+ *
+ * @returns {Object} A list of providers.
+ * @throws {Error} If there are issues with retrieving providers.
+ */
+async function getProviders() {
   try {
     const providerList = await Provider.findAll();
 
@@ -165,20 +206,26 @@ async function getproviders() {
   }
 }
 
-
-async function installation(body) {
+/**
+ * Get installation information based on location.
+ *
+ * @param {Object} body - The request body containing 'location'.
+ * @returns {Object} Installation information including the lowestPrice and associated days.
+ * @throws {Error} If there are issues with retrieving installation information.
+ */
+async function getInstallationInfo(body) {
   try {
-    const { id_loc } = body;
+    const { location } = body;
 
-    // Query for Coverage Data
-    const providerList = await Coverage.findAll({
+    // Query for Coverage Providers
+    const coverageProviders = await Coverage.findAll({
       include: [
         {
           model: Location,
           attributes: ['location'],
           required: true,
           where: {
-            location: id_loc,
+            location,
           },
         },
         {
@@ -189,14 +236,14 @@ async function installation(body) {
       ],
     });
 
-    if (providerList.length === 0) {
+    if (coverageProviders.length === 0) {
       throw new Error("No coverage providers found for the given location.");
     }
 
     // Extract Provider IDs
-    const providerIds = providerList.map((provider) => provider.id_prov);
+    const providerIds = coverageProviders.map((provider) => provider.id_prov);
 
-    // Query for SLAs
+    // Query for the Lowest SLA
     const lowestSla = await Sla.findAll({
       where: {
         id_prov: providerIds,
@@ -206,7 +253,7 @@ async function installation(body) {
           model: Location,
           attributes: ['location'],
           where: {
-            id: providerList[0].id_loc,
+            id: coverageProviders[0].id_loc,
           },
           required: true,
         },
@@ -216,7 +263,7 @@ async function installation(body) {
           required: true,
         },
       ],
-      attributes: ['id_prov'],
+      attributes: ['days', 'id_prov'],
       order: [['days', 'ASC']],
     });
 
@@ -224,20 +271,20 @@ async function installation(body) {
       throw new Error("No SLAs found for the selected providers.");
     }
 
-    // Extract Provider IDs with Lowest SLA
-    const slaproviders = lowestSla.map((sla) => sla.id_prov);
+    // Extract Provider IDs with the Lowest SLA
+    const lowestSlaProviderIds = lowestSla.map((sla) => sla.id_prov);
 
-    // Query for Prices
+    // Query for the Lowest Price
     const lowestPrice = await Price.findAll({
       where: {
-        id_prov: slaproviders,
+        id_prov: lowestSlaProviderIds,
       },
       include: [
         {
           model: Location,
           attributes: ['location'],
           where: {
-            id: providerList[0].id_loc,
+            id: coverageProviders[0].id_loc,
           },
           required: true,
         },
@@ -255,21 +302,26 @@ async function installation(body) {
       throw new Error("No prices found for the selected providers.");
     }
 
-    return lowestPrice;
+    const resultProviderIds = lowestPrice.map((price) => price.id_prov);
+
+    return {
+      result: {
+        lowestPrice,
+        days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
+      },
+    };
   } catch (error) {
     throw new Error(`Error performing installation: ${error.message}`);
   }
 }
 
-
 module.exports = {
-  register,
-  login,
-  installation,
-  getsla,
-  getprices,
-  getlocations,
-  getcoverage,
-  installation,
-  getproviders,
+  registerUser,
+  loginUser,
+  getInstallationInfo,
+  getSLAData,
+  getPriceData,
+  getLocations,
+  getCoverageData,
+  getProviders,
 };

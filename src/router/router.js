@@ -3,14 +3,44 @@ const passport = require("passport");
 const router = express.Router();
 const controller = require("../controllers/controller");
 
+/**
+ * Route to register a new user.
+ */
+router.post("/register", controller.registerUser);
 
-router.post("/register", controller.register) ;
-router.post("/login", passport.authenticate("local"), controller.login);
-router.get("/locations", controller.getlocations);
-router.get("/providers", controller.getproviders);
-router.post("/installation", controller.installation);
-router.get("/sla", controller.getsla);
-router.get("/coverage", controller.getcoverage);
-router.get("/prices", controller.getprices);
+/**
+ * Route to log in a user.
+ */
+router.post("/login", passport.authenticate("local"), controller.loginUser);
+
+/**
+ * Route to get a list of locations.
+ */
+router.get("/locations", controller.getLocations);
+
+/**
+ * Route to get a list of providers.
+ */
+router.get("/providers", controller.getProviders);
+
+/**
+ * Route to get installation information.
+ */
+router.post("/installation", controller.getInstallationInfo);
+
+/**
+ * Route to get a list of SLA data.
+ */
+router.get("/sla", controller.getSLAData);
+
+/**
+ * Route to get a list of coverage data.
+ */
+router.get("/coverage", controller.getCoverageData);
+
+/**
+ * Route to get a list of price data.
+ */
+router.get("/prices", controller.getPriceData);
 
 module.exports = router;

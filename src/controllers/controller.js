@@ -135,8 +135,24 @@ async function installationRequest(req, res) {
   }
 }
 
+/**
+ * Get all installation requests.
+ *
+ * @param {Object} req - The request object containing the request body.
+ * @param {Object} res - The response object.
+ */
+async function getInstallations(req, res) {
+  try {
+    const result = await query.getInstallationList();
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
+}
+
 module.exports = {
   registerUser,
+  getInstallations,
   loginUser,
   getCoverageData,
   getPriceData,

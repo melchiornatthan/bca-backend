@@ -76,4 +76,12 @@ router.get("/prices", controller.getPriceData);
  */
 router.post("/installation-request", controller.installationRequest);
 
+/**
+ * Route to get a list of installations data.
+ *
+ * @method Get
+ * @route /installations
+ */
+router.get("/installations", controller.getInstallations);
+
 module.exports = router;

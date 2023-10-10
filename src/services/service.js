@@ -53,7 +53,7 @@ async function loginUser(body) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new Error("Invalid password");
+      throw aError("Invalid password");
     }
 
     return {
@@ -215,7 +215,6 @@ async function getProviders() {
  */
 async function getInstallationInfo(location) {
   try {
-
     // Query for Coverage Providers
     const coverageProviders = await Coverage.findAll({
       include: [
@@ -304,16 +303,21 @@ async function getInstallationInfo(location) {
     const resultProviderIds = lowestPrice.map((price) => price.id_prov);
 
     return {
-      
-        lowestPrice,
-        days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
-      
+      lowestPrice,
+      days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
     };
   } catch (error) {
     throw new Error(`Error performing installation: ${error.message}`);
   }
 }
 
+/**
+ * Create a new installation based on provided data.
+ *
+ * @param {Object} body - The request body containing installation data.
+ * @returns {Object} The created installation.
+ * @throws {Error} If there are issues with creating the installation.
+ */
 async function createInstallation(body) {
   // Destructure input data
   const { location, address, branch_pic, area } = body;
@@ -344,9 +348,27 @@ async function createInstallation(body) {
   }
 }
 
+/**
+ * Get a list of installations.
+ *
+ * @returns {Array} A list of installations.
+ * @throws {Error} If there are issues with retrieving installation data.
+ */
+async function getInstallationList() {
+  try {
+    // Fetch all installation records
+    const installations = await Installation.findAll();
+    return installations;
+  } catch (error) {
+    console.error('Error fetching installation list:', error);
+    throw new Error('Error fetching installation list');
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
+  getInstallationList,
   getInstallationInfo,
   getSLAData,
   getPriceData,

@@ -10,8 +10,8 @@ async function registerUser(req, res) {
   try {
     const result = await query.registerUser(req.body);
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -25,8 +25,8 @@ async function loginUser(req, res) {
   try {
     const result = await query.loginUser(req.body);
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -40,8 +40,8 @@ async function getLocations(req, res) {
   try {
     const result = await query.getLocations();
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -55,8 +55,8 @@ async function getProviders(req, res) {
   try {
     const result = await query.getProviders();
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -70,8 +70,8 @@ async function getSLAData(req, res) {
   try {
     const result = await query.getSLAData();
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -85,8 +85,8 @@ async function getCoverageData(req, res) {
   try {
     const result = await query.getCoverageData();
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -100,8 +100,8 @@ async function getPriceData(req, res) {
   try {
     const result = await query.getPriceData();
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -113,10 +113,25 @@ async function getPriceData(req, res) {
  */
 async function getInstallationInfo(req, res) {
   try {
-    const result = await query.getInstallationInfo(req.body);
+    const result = await query.getInstallationInfo(req.body.location);
     res.json(result);
-  } catch (err) {
-    res.json(err);
+  } catch (error) {
+    res.json(error);
+  }
+}
+
+/**
+ * Submit an installation request.
+ *
+ * @param {Object} req - The request object containing the request body.
+ * @param {Object} res - The response object.
+ */
+async function installationRequest(req, res) {
+  try {
+    const result = await query.createInstallation(req.body);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
   }
 }
 
@@ -126,6 +141,7 @@ module.exports = {
   getCoverageData,
   getPriceData,
   getSLAData,
+  installationRequest,
   getLocations,
   getProviders,
   getInstallationInfo,

@@ -5,7 +5,7 @@ const Location = require("../models/locations");
 const Sla = require("../models/sla");
 const Coverage = require("../models/coverage");
 const Price = require("../models/price");
-const sequelize = require("../database/connection");
+const Installation = require("../models/installations");
 
 /**
  * Register a new user.
@@ -213,9 +213,8 @@ async function getProviders() {
  * @returns {Object} Installation information including the lowestPrice and associated days.
  * @throws {Error} If there are issues with retrieving installation information.
  */
-async function getInstallationInfo(body) {
+async function getInstallationInfo(location) {
   try {
-    const { location } = body;
 
     // Query for Coverage Providers
     const coverageProviders = await Coverage.findAll({
@@ -305,13 +304,43 @@ async function getInstallationInfo(body) {
     const resultProviderIds = lowestPrice.map((price) => price.id_prov);
 
     return {
-      result: {
+      
         lowestPrice,
         days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
-      },
+      
     };
   } catch (error) {
     throw new Error(`Error performing installation: ${error.message}`);
+  }
+}
+
+async function createInstallation(body) {
+  // Destructure input data
+  const { location, address, branch_pic, area } = body;
+
+  // Fetch installation information based on the provided area
+  const installationInfo = await getInstallationInfo(area);
+
+  try {
+    // Create a new installation record
+    const installation = await Installation.create({
+      location,
+      address,
+      branch_pic,
+      price_id: installationInfo.lowestPrice[0].dataValues.id_price,
+      area,
+      days: installationInfo.days[0],
+      provider: installationInfo.lowestPrice[0].provider.dataValues.provider,
+      provider_id: installationInfo.lowestPrice[0].id_prov,
+      price: installationInfo.lowestPrice[0].dataValues.price,
+      area_id: installationInfo.lowestPrice[0].dataValues.id_loc,
+    });
+
+    console.log('Installation created:', installation.toJSON());
+    return installation;
+  } catch (error) {
+    console.error('Error creating installation:', error);
+    throw new Error('Error creating installation');
   }
 }
 
@@ -321,6 +350,7 @@ module.exports = {
   getInstallationInfo,
   getSLAData,
   getPriceData,
+  createInstallation,
   getLocations,
   getCoverageData,
   getProviders,

@@ -18,7 +18,10 @@ async function registerUser(body) {
   const { username, password } = body;
 
   try {
+    // Hash the user's password before storing it
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create a new user in the database
     const newUser = await User.create({ username, password: hashedPassword });
 
     if (!newUser) {
@@ -44,16 +47,18 @@ async function loginUser(body) {
   const { username, password } = body;
 
   try {
+    // Find the user by their username
     const user = await User.findOne({ where: { username } });
 
     if (!user) {
       throw new Error("Invalid username");
     }
 
+    // Check if the provided password matches the hashed password in the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw aError("Invalid password");
+      throw new Error("Invalid password");
     }
 
     return {
@@ -72,6 +77,7 @@ async function loginUser(body) {
  */
 async function getLocations() {
   try {
+    // Retrieve a list of locations from the database
     const locations = await Location.findAll();
 
     if (locations.length === 0) {
@@ -92,6 +98,7 @@ async function getLocations() {
  */
 async function getSLAData() {
   try {
+    // Retrieve a list of SLA data from the database, including related location and provider information
     const slaList = await Sla.findAll({
       include: [
         {
@@ -126,6 +133,7 @@ async function getSLAData() {
  */
 async function getCoverageData() {
   try {
+    // Retrieve a list of coverage data from the database, including related location and provider information
     const coverageList = await Coverage.findAll({
       include: [
         {
@@ -160,6 +168,7 @@ async function getCoverageData() {
  */
 async function getPriceData() {
   try {
+    // Retrieve a list of price data from the database, including related location and provider information
     const priceList = await Price.findAll({
       include: [
         {
@@ -194,6 +203,7 @@ async function getPriceData() {
  */
 async function getProviders() {
   try {
+    // Retrieve a list of provider data from the database
     const providerList = await Provider.findAll();
 
     if (providerList.length === 0) {
@@ -326,7 +336,7 @@ async function createInstallation(body) {
   const installationInfo = await getInstallationInfo(area);
 
   try {
-    // Create a new installation record
+    // Create a new installation record in the database
     const installation = await Installation.create({
       location,
       address,
@@ -356,7 +366,7 @@ async function createInstallation(body) {
  */
 async function getInstallationList() {
   try {
-    // Fetch all installation records
+    // Fetch all installation records from the database
     const installations = await Installation.findAll();
     return installations;
   } catch (error) {
@@ -365,12 +375,207 @@ async function getInstallationList() {
   }
 }
 
+/**
+ * Get installation by ID.
+ *
+ * @param {Object} body - The request body containing 'id'.
+ * @returns {Array} A list of installations matching the provided ID.
+ * @throws {Error} If there are issues with retrieving installation data.
+ */
+async function getInstallationById(body) {
+  const { id } = body;
+  try {
+    // Fetch all installation records matching the provided ID
+    const installation = await Installation.findAll({
+      where: {
+        id: id,
+      }
+    });
+    return installation;
+  } catch (error) {
+    console.error('Error fetching installation list:', error);
+    throw new Error('Error fetching installation list');
+  }
+}
+
+/**
+ * Update installation status to "approved" by ID if it's currently "pending".
+ *
+ * @param {Object} body - The request body containing 'id'.
+ * @returns {Object} A success message if the update is successful.
+ * @throws {Error} If there are issues with updating the installation.
+ */
+async function updateInstallation(body) {
+  const { id } = body;
+  try {
+    // Update installation status to "approved" if it's currently "pending"
+    const updateInstallation = await Installation.update(
+      {
+        status: "approved",
+      },
+      {
+        where: {
+          status: "pending",
+          id: id,
+        }
+      }
+    )
+    if (updateInstallation[0] === 1) {
+      return updateInstallation;
+    }
+  } catch (error) {
+    console.error('Error updating installation list:', error);
+    throw new Error('Error updating installation list');
+  }
+}
+
+/**
+ * Override an installation's data and set status to "approved" if it's currently "pending".
+ *
+ * @param {Object} body - The request body containing 'id', 'id_prov', 'days', 'provider', 'id_price', 'price'.
+ * @returns {Object} A success message if the override is successful.
+ * @throws {Error} If there are issues with updating the installation.
+ */
+async function overrideInstallation(body) {
+  const { id, id_prov, days, provider, id_price, price } = body;
+  try {
+    // Update installation with new information and set status to "approved" if it's currently "pending"
+    const results = await Installation.update({
+      provider: provider,
+      provider_id: id_prov,
+      days: days,
+      price_id: id_price,
+      price: price,
+      status: "approved"
+    },
+    {
+      where: {
+        id: id,
+        status: "pending"
+      }
+    });
+    return results;
+  } catch (error) {
+    console.error('Error updating installation list:', error);
+    throw new Error('Error updating installation list');
+  }
+}
+
+/**
+ * Get installation provider based on a location.
+ *
+ * @param {String} location - The location for which to find the installation provider.
+ * @returns {Object} Installation provider information.
+ * @throws {Error} If there are issues with finding the installation provider.
+ */
+async function getInstallationProvider(location) {
+  try {
+    // Query for Coverage Providers
+    const coverageProviders = await Coverage.findAll({
+      include: [
+        {
+          model: Location,
+          attributes: ['location'],
+          required: true,
+          where: {
+            location,
+          },
+        },
+        {
+          model: Provider,
+          attributes: ['provider'],
+          required: true,
+        },
+      ],
+    });
+
+    if (coverageProviders.length === 0) {
+      throw new Error("No coverage providers found for the given location.");
+    }
+
+    // Extract Provider IDs
+    const providerIds = coverageProviders.map((provider) => provider.id_prov);
+
+    // Query for the Lowest SLA
+    const lowestSla = await Sla.findAll({
+      where: {
+        id_prov: providerIds,
+      },
+      include: [
+        {
+          model: Location,
+          attributes: ['location'],
+          where: {
+            id: coverageProviders[0].id_loc,
+          },
+          required: true,
+        },
+        {
+          model: Provider,
+          attributes: ['provider'],
+          required: true,
+        },
+      ],
+      attributes: ['days', 'id_prov'],
+      order: [['days', 'ASC']],
+    });
+
+    if (lowestSla.length === 0) {
+      throw new Error("No SLAs found for the selected providers.");
+    }
+
+    // Extract Provider IDs with the Lowest SLA
+    const lowestSlaProviderIds = lowestSla.map((sla) => sla.id_prov);
+
+    // Query for the Lowest Price
+    const lowestPrice = await Price.findAll({
+      where: {
+        id_prov: lowestSlaProviderIds,
+      },
+      include: [
+        {
+          model: Location,
+          attributes: ['location'],
+          where: {
+            id: coverageProviders[0].id_loc,
+          },
+          required: true,
+        },
+        {
+          model: Provider,
+          attributes: ['provider'],
+          required: true,
+        },
+      ],
+      order: [['price', 'ASC']],
+      limit: 4,
+    });
+
+    if (lowestPrice.length === 0) {
+      throw new Error("No prices found for the selected providers.");
+    }
+
+    const resultProviderIds = lowestPrice.map((price) => price.id_prov);
+
+    return {
+      lowestPrice,
+      days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
+    };
+  } catch (error) {
+    throw new Error(`Error performing installation: ${error.message}`);
+  }
+}
+
 module.exports = {
   registerUser,
+  getInstallationProvider,
+  updateInstallation,
   loginUser,
   getInstallationList,
+  overrideInstallation,
   getInstallationInfo,
   getSLAData,
+  getInstallationById,
   getPriceData,
   createInstallation,
   getLocations,

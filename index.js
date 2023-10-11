@@ -1,10 +1,6 @@
-/**
- * Entry Point of the App
- */
+// Import required modules and setup
 const express = require("express");
 const bodyParser = require("body-parser");
-const port = process.env.PORT || 3333;
-const app = express();
 const session = require("express-session");
 const cors = require("cors");
 const passport = require("passport");
@@ -14,27 +10,35 @@ const store = new session.MemoryStore();
 const todoRoutes = require("./src/router/router");
 
 const corsOptions = {
-  origin: "*",
+  origin: "*", // Replace with the actual allowed origins
   Credentials: true,
   optionsSuccessStatus: 200,
 };
 
+const port = process.env.PORT || 3333;
+const app = express();
+
+// Configure session management
 app.use(
   session({
-    secret: "secret",
+    secret: "secret", // Replace with a secure secret key
     resave: false,
     cookie: {
-      maxAge: 6000000000,
+      maxAge: 6000000000, // Replace with an appropriate session duration
     },
     saveUninitialized: false,
     store,
   })
 );
 
+// Initialize Passport and session
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Enable CORS
 app.use(cors(corsOptions));
+
+// Configure body parsers
 app.use(bodyParser.json());
 app.use(
   bodyParser.urlencoded({
@@ -42,6 +46,7 @@ app.use(
   })
 );
 
+// Define a root route
 app.get("/", (req, res) => {
   if (req.user) {
     res.send(req.user);
@@ -50,7 +55,9 @@ app.get("/", (req, res) => {
   }
 });
 
-sequelize.sync()
+// Sync the database and start the server
+sequelize
+  .sync()
   .then(() => {
     console.log('Database synchronized.');
     // Your application logic here
@@ -59,8 +66,10 @@ sequelize.sync()
     console.error('Error synchronizing database:', error);
   });
 
+// Define routes
 app.use("/bca-app", todoRoutes);
 
+// Start the server
 app.listen(port, () => {
   console.log("Server is running on port: " + port);
 });

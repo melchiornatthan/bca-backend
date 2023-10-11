@@ -79,9 +79,41 @@ router.post("/installation-request", controller.installationRequest);
 /**
  * Route to get a list of installations data.
  *
- * @method Get
+ * @method GET
  * @route /installations
  */
 router.get("/installations", controller.getInstallations);
+
+/**
+ * Route to get installations by ID.
+ *
+ * @method GET
+ * @route /installationsById
+ */
+router.get("/installationsById", controller.getInstallationsById);
+
+/**
+ * Route to get installations providers.
+ *
+ * @method GET
+ * @route /installations-providers
+ */
+router.get("/installations-providers", controller.getInstallationsProviders);
+
+/**
+ * Route to update installations data.
+ *
+ * @method PUT
+ * @route /update-installations
+ */
+router.put("/update-installations", controller.updateInstallations);
+
+/**
+ * Route to override installations.
+ *
+ * @method POST
+ * @route /installation-override
+ */
+router.post("/installation-override", controller.overrideInstallations);
 
 module.exports = router;

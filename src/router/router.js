@@ -3,117 +3,138 @@ const passport = require("passport");
 const router = express.Router();
 const controller = require("../controllers/controller");
 
-/**
- * Route to register a new user.
- *
- * @method POST
- * @route /register
- */
-router.post("/register", controller.registerUser);
+// Common error handling middleware
+const errorHandler = (err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({ error: "An error occurred." });
+};
 
-/**
- * Route to log in a user.
- *
- * @method POST
- * @route /login
- * @middleware Passport Local Authentication
- */
-router.post("/login", passport.authenticate("local"), controller.loginUser);
+const routes = [
+  // Register a new user
+  {
+    method: "post",
+    path: "/register",
+    middleware: undefined,
+    handler: controller.registerUser,
+    description: "Register a new user.",
+  },
+  // Log in a user
+  {
+    method: "post",
+    path: "/login",
+    middleware: passport.authenticate("local"),
+    handler: controller.loginUser,
+    description: "Log in a user.",
+  },
+  // Get a list of locations
+  {
+    method: "get",
+    path: "/locations",
+    middleware: undefined,
+    handler: controller.getLocations,
+    description: "Get a list of locations.",
+  },
+  // Get a list of providers
+  {
+    method: "get",
+    path: "/providers",
+    middleware: undefined,
+    handler: controller.getProviders,
+    description: "Get a list of providers.",
+  },
+  // Get installation information
+  {
+    method: "post",
+    path: "/installation",
+    middleware: undefined,
+    handler: controller.getInstallationInfo,
+    description: "Get installation information.",
+  },
+  // Get a list of SLA data
+  {
+    method: "get",
+    path: "/sla",
+    middleware: undefined,
+    handler: controller.getSLAData,
+    description: "Get a list of SLA data.",
+  },
+  // Get a list of coverage data
+  {
+    method: "get",
+    path: "/coverage",
+    middleware: undefined,
+    handler: controller.getCoverageData,
+    description: "Get a list of coverage data.",
+  },
+  // Get a list of price data
+  {
+    method: "get",
+    path: "/prices",
+    middleware: undefined,
+    handler: controller.getPriceData,
+    description: "Get a list of price data.",
+  },
+  // Submit an installation request
+  {
+    method: "post",
+    path: "/installation-request",
+    middleware: undefined,
+    handler: controller.installationRequest,
+    description: "Submit an installation request.",
+  },
+  // Get a list of installations data
+  {
+    method: "get",
+    path: "/installations",
+    middleware: undefined,
+    handler: controller.getInstallations,
+    description: "Get a list of installations data.",
+  },
+  // Get installations by ID
+  {
+    method: "get",
+    path: "/installationsById",
+    middleware: undefined,
+    handler: controller.getInstallationsById,
+    description: "Get installations by ID.",
+  },
+  // Get installations providers
+  {
+    method: "get",
+    path: "/installations-providers",
+    middleware: undefined,
+    handler: controller.getInstallationsProviders,
+    description: "Get installations providers.",
+  },
+  // Update installations data
+  {
+    method: "put",
+    path: "/update-installations",
+    middleware: undefined,
+    handler: controller.updateInstallations,
+    description: "Update installations data.",
+  },
+  // Override installations
+  {
+    method: "post",
+    path: "/installation-override",
+    middleware: undefined,
+    handler: controller.overrideInstallations,
+    description: "Override installations.",
+  },
+];
 
-/**
- * Route to get a list of locations.
- *
- * @method GET
- * @route /locations
- */
-router.get("/locations", controller.getLocations);
+routes.forEach((route) => {
+  const args = [route.path];
+  if (route.middleware) {
+    args.splice(1, 0, route.middleware);
+  }
+  args.push(route.handler);
 
-/**
- * Route to get a list of providers.
- *
- * @method GET
- * @route /providers
- */
-router.get("/providers", controller.getProviders);
+  // Add route-specific error handling middleware
+  args.push(errorHandler);
 
-/**
- * Route to get installation information.
- *
- * @method POST
- * @route /installation
- */
-router.post("/installation", controller.getInstallationInfo);
-
-/**
- * Route to get a list of SLA data.
- *
- * @method GET
- * @route /sla
- */
-router.get("/sla", controller.getSLAData);
-
-/**
- * Route to get a list of coverage data.
- *
- * @method GET
- * @route /coverage
- */
-router.get("/coverage", controller.getCoverageData);
-
-/**
- * Route to get a list of price data.
- *
- * @method GET
- * @route /prices
- */
-router.get("/prices", controller.getPriceData);
-
-/**
- * Route to submit an installation request.
- *
- * @method POST
- * @route /installation-request
- */
-router.post("/installation-request", controller.installationRequest);
-
-/**
- * Route to get a list of installations data.
- *
- * @method GET
- * @route /installations
- */
-router.get("/installations", controller.getInstallations);
-
-/**
- * Route to get installations by ID.
- *
- * @method GET
- * @route /installationsById
- */
-router.get("/installationsById", controller.getInstallationsById);
-
-/**
- * Route to get installations providers.
- *
- * @method GET
- * @route /installations-providers
- */
-router.get("/installations-providers", controller.getInstallationsProviders);
-
-/**
- * Route to update installations data.
- *
- * @method PUT
- * @route /update-installations
- */
-router.put("/update-installations", controller.updateInstallations);
-
-/**
- * Route to override installations.
- *
- * @method POST
- * @route /installation-override
- */
-router.post("/installation-override", controller.overrideInstallations);
+  router[route.method](...args);
+});
 
 module.exports = router;

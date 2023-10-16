@@ -1,213 +1,68 @@
 const query = require("../services/service");
 
-/**
- * Register a new user.
- *
- * @param {Object} req - The request object containing the request body.
- * @param {Object} res - The response object.
- */
-async function registerUser(req, res) {
+async function handleRequestResponse(req, res, queryFunction) {
   try {
-    const result = await query.registerUser(req.body);
+    const result = await queryFunction(req.body);
     res.json(result);
   } catch (error) {
     res.json(error);
   }
 }
 
-/**
- * Authenticate and log in a user.
- *
- * @param {Object} req - The request object containing the request body.
- * @param {Object} res - The response object.
- */
-async function loginUser(req, res) {
-  try {
-    const result = await query.loginUser(req.body);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function registerUser(req, res) {
+  handleRequestResponse(req, res, query.registerUser);
 }
 
-/**
- * Get a list of locations.
- *
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- */
-async function getLocations(req, res) {
-  try {
-    const result = await query.getLocations();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function loginUser(req, res) {
+  handleRequestResponse(req, res, query.loginUser);
 }
 
-/**
- * Get a list of providers.
- *
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- */
-async function getProviders(req, res) {
-  try {
-    const result = await query.getProviders();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getLocations(req, res) {
+  handleRequestResponse(req, res, query.getLocations);
 }
 
-/**
- * Get a list of SLA data.
- *
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- */
-async function getSLAData(req, res) {
-  try {
-    const result = await query.getSLAData();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getProviders(req, res) {
+  handleRequestResponse(req, res, query.getProviders);
 }
 
-/**
- * Get a list of coverage data.
- *
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- */
-async function getCoverageData(req, res) {
-  try {
-    const result = await query.getCoverageData();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getSLAData(req, res) {
+  handleRequestResponse(req, res, query.getSLAData);
 }
 
-/**
- * Get a list of price data.
- *
- * @param {Object} req - The request object.
- * @param {Object} res - The response object.
- */
-async function getPriceData(req, res) {
-  try {
-    const result = await query.getPriceData();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getCoverageData(req, res) {
+  handleRequestResponse(req, res, query.getCoverageData);
 }
 
-/**
- * Get installation information based on location.
- *
- * @param {Object} req - The request object containing the request body.
- * @param {Object} res - The response object.
- */
-async function getInstallationInfo(req, res) {
-  try {
-    const result = await query.getInstallationInfo(req.body.location);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getPriceData(req, res) {
+  handleRequestResponse(req, res, query.getPriceData);
 }
 
-/**
- * Submit an installation request.
- *
- * @param {Object} req - The request object containing the request body.
- * @param {Object} res - The response object.
- */
-async function installationRequest(req, res) {
-  try {
-    const result = await query.createInstallation(req.body);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getInstallationInfo(req, res) {
+  handleRequestResponse(req, res, (body) => query.getInstallationInfo(body.location));
 }
 
-/**
- * Get all installation requests.
- *
- * @param {Object} req - The request object containing the request body.
- * @param {Object} res - The response object.
- */
-async function getInstallations(req, res) {
-  try {
-    const result = await query.getInstallationList();
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function installationRequest(req, res) {
+  handleRequestResponse(req, res, query.createInstallation);
 }
 
-/**
- * Get installation information by ID.
- *
- * @param {Object} req - The Express request object containing 'body'.
- * @param {Object} res - The Express response object to send the result or error.
- */
-async function getInstallationsById(req, res) {
-  try {
-    const result = await query.getInstallationById(req.body);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getInstallations(req, res) {
+  handleRequestResponse(req, res, query.getInstallationList);
 }
 
-/**
- * Get installation providers based on a location.
- *
- * @param {Object} req - The Express request object containing 'location'.
- * @param {Object} res - The Express response object to send the result or error.
- */
-async function getInstallationsProviders(req, res) {
-  try {
-    const result = await query.getInstallationProvider(req.body.location);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getInstallationsById(req, res) {
+  handleRequestResponse(req, res, query.getInstallationById);
 }
 
-/**
- * Update installation status to "approved" by ID if it's currently "pending".
- *
- * @param {Object} req - The Express request object containing 'body'.
- * @param {Object} res - The Express response object to send the result or error.
- */
-async function updateInstallations(req, res) {
-  try {
-    const result = await query.updateInstallation(req.body);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function getInstallationsProviders(req, res) {
+  handleRequestResponse(req, res, (body) => query.getInstallationProvider(body.location));
 }
 
-/**
- * Override an installation's data and set status to "approved" if it's currently "pending".
- *
- * @param {Object} req - The Express request object containing 'body'.
- * @param {Object} res - The Express response object to send the result or error.
- */
-async function overrideInstallations(req, res) {
-  try {
-    const result = await query.overrideInstallation(req.body);
-    res.json(result);
-  } catch (error) {
-    res.json(error);
-  }
+function updateInstallations(req, res) {
+  handleRequestResponse(req, res, query.updateInstallation);
+}
+
+function overrideInstallations(req, res) {
+  handleRequestResponse(req, res, query.overrideInstallation);
 }
 
 module.exports = {

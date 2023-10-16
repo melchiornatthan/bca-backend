@@ -367,7 +367,11 @@ async function createInstallation(body) {
 async function getInstallationList() {
   try {
     // Fetch all installation records from the database
-    const installations = await Installation.findAll();
+    const installations = await Installation.findAll(
+      {
+        order:[['status', 'ASC'],['createdAt', 'DESC']]
+      }
+    );
     return installations;
   } catch (error) {
     console.error('Error fetching installation list:', error);

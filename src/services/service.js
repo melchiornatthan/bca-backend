@@ -330,7 +330,7 @@ async function getInstallationInfo(location) {
  */
 async function createInstallation(body) {
   // Destructure input data
-  const { location, address, branch_pic, area } = body;
+  const { location, address, branch_pic, area, batchid, createdAt} = body;
 
   // Fetch installation information based on the provided area
   const installationInfo = await getInstallationInfo(area);
@@ -338,8 +338,10 @@ async function createInstallation(body) {
   try {
     // Create a new installation record in the database
     const installation = await Installation.create({
+      createdAt: createdAt,
       location,
       address,
+      batchid : batchid,
       branch_pic,
       price_id: installationInfo.lowestPrice[0].dataValues.id_price,
       area,
@@ -386,8 +388,7 @@ async function getInstallationList() {
  * @returns {Array} A list of installations matching the provided ID.
  * @throws {Error} If there are issues with retrieving installation data.
  */
-async function getInstallationById(body) {
-  const { id } = body;
+async function getInstallationById(id) {
   try {
     // Fetch all installation records matching the provided ID
     const installation = await Installation.findAll({
@@ -409,8 +410,7 @@ async function getInstallationById(body) {
  * @returns {Object} A success message if the update is successful.
  * @throws {Error} If there are issues with updating the installation.
  */
-async function updateInstallation(body) {
-  const { id } = body;
+async function updateInstallation(id) {
   try {
     // Update installation status to "approved" if it's currently "pending"
     const updateInstallation = await Installation.update(
@@ -433,6 +433,85 @@ async function updateInstallation(body) {
   }
 }
 
+async function getBatchId() {
+  try {
+    // Update installation status to "approved" if it's currently "pending"
+    const getBatchId = await Installation.findOne({
+      order:[['batchid', 'DESC']],
+      attributes: ['batchid'],
+      limit: 1
+    }
+    )
+    
+      return getBatchId;
+    
+  } catch (error) {
+    console.error('Error getting batch ID', error);
+    throw new Error('Error getting batch ID');
+  }
+}
+async function getProvidersbyArea(id_loc) {
+  try {
+    // Update installation status to "approved" if it's currently "pending"
+    const getBatchList = await Price.findAll({
+      include: [
+        {
+          model: Provider,
+          attributes: ['provider', 'id'],
+          required: true,
+        }
+      ],
+      where: {
+        id_loc: id_loc,
+      },
+      attributes: [],
+    },
+    
+    )
+      return {
+        list: getBatchList
+      };
+    
+  } catch (error) {
+    console.error('Error getting provider List', error);
+    throw new Error('Error getting provider List');
+  }
+}
+
+async function getBatchInstallation() {
+  try {
+    // Update installation status to "approved" if it's currently "pending"
+    const getBatchList = await Installation.findAll({
+      order:[['createdAt', 'DESC'], ['status', 'ASC']],
+      attributes: ['batchid', 'status', 'createdAt'],
+      group: ['batchid', 'status', 'createdAt'],
+    }
+    )
+      return getBatchList;
+    
+  } catch (error) {
+    console.error('Error getting batch List', error);
+    throw new Error('Error getting batch List');
+  }
+}
+
+
+async function getInstallationbyBatch(batchid) {
+  
+  try {
+    console.log(batchid)
+    // Update installation status to "approved" if it's currently "pending"
+    const getBatchList = await Installation.findAll({
+      where: {batchid: batchid},
+    }
+    )
+      return getBatchList;
+    
+  } catch (error) {
+    console.error('Error getting batch List', error);
+    throw new Error('Error getting batch List');
+  }
+}
 /**
  * Override an installation's data and set status to "approved" if it's currently "pending".
  *
@@ -441,15 +520,16 @@ async function updateInstallation(body) {
  * @throws {Error} If there are issues with updating the installation.
  */
 async function overrideInstallation(body) {
-  const { id, id_prov, days, provider, id_price, price } = body;
+  const { id, id_prov, location } = body;
   try {
+    const newProvider = await getInstallationProvider(location, id_prov);
     // Update installation with new information and set status to "approved" if it's currently "pending"
     const results = await Installation.update({
-      provider: provider,
+      provider: newProvider.lowestPrice[0].provider.provider,
       provider_id: id_prov,
-      days: days,
-      price_id: id_price,
-      price: price,
+      days: newProvider.days[0],
+      price_id: newProvider.lowestPrice[0].id_price,
+      price: newProvider.lowestPrice[0].price,
       status: "approved"
     },
     {
@@ -472,8 +552,9 @@ async function overrideInstallation(body) {
  * @returns {Object} Installation provider information.
  * @throws {Error} If there are issues with finding the installation provider.
  */
-async function getInstallationProvider(location) {
+async function getInstallationProvider(location, id_prov) {
   try {
+    console.log(id_prov)
     // Query for Coverage Providers
     const coverageProviders = await Coverage.findAll({
       include: [
@@ -489,6 +570,9 @@ async function getInstallationProvider(location) {
           model: Provider,
           attributes: ['provider'],
           required: true,
+          where: {
+            id:id_prov
+          }
         },
       ],
     });
@@ -575,14 +659,18 @@ module.exports = {
   getInstallationProvider,
   updateInstallation,
   loginUser,
+  getBatchInstallation,
   getInstallationList,
   overrideInstallation,
   getInstallationInfo,
   getSLAData,
   getInstallationById,
   getPriceData,
+  getBatchId,
   createInstallation,
   getLocations,
+  getInstallationbyBatch,
+  getProvidersbyArea,
   getCoverageData,
   getProviders,
 };

@@ -16,6 +16,10 @@ const Installation = sequelize.define('installations', {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  batchid: {
+    type: Sequelize.BIGINT,
+    allowNull: false,
+  },
   branch_pic: {
     type: Sequelize.STRING,
     allowNull: false,

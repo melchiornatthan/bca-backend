@@ -90,7 +90,7 @@ router.get("/installations", controller.getInstallations);
  * @method GET
  * @route /installationsById
  */
-router.get("/installationsById", controller.getInstallationsById);
+router.get("/installationsById/:id", controller.getInstallationsById);
 
 /**
  * Route to get installations providers.
@@ -98,7 +98,7 @@ router.get("/installationsById", controller.getInstallationsById);
  * @method GET
  * @route /installations-providers
  */
-router.get("/installations-providers", controller.getInstallationsProviders);
+router.get("/installations-providers/:location/:id_prov", controller.getInstallationsProviders);
 
 /**
  * Route to update installations data.
@@ -106,7 +106,7 @@ router.get("/installations-providers", controller.getInstallationsProviders);
  * @method PUT
  * @route /update-installations
  */
-router.put("/update-installations", controller.updateInstallations);
+router.put("/update-installations/:id", controller.updateInstallations);
 
 /**
  * Route to override installations.
@@ -116,4 +116,11 @@ router.put("/update-installations", controller.updateInstallations);
  */
 router.post("/installation-override", controller.overrideInstallations);
 
+router.get("/getBatchId", controller.getBatchId);
+router.get("/getInstallationsbyBatchID/:batchid", controller.getInstallationsbyBatchID);
+
+router.get("/getBatchInstallations", controller.getBatchInstallations);
+
+
+router.get("/getProvidersbyArea/:id_loc", controller.getProvidersbyArea);
 module.exports = router;

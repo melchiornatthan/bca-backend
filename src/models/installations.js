@@ -55,6 +55,16 @@ const Installation = sequelize.define('installations', {
   area: {
     type: Sequelize.STRING,
   },
+  relocation_status: {
+    type: Sequelize.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  },
+  dismantle_status: {
+    type: Sequelize.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  },
 });
 
 module.exports = Installation;

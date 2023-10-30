@@ -92,6 +92,7 @@ async function getLocations() {
   }
 }
 
+
 /**
  * Gets a list of SLA data.
  *

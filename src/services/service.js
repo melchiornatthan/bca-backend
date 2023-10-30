@@ -573,6 +573,7 @@ async function getDismantles() {
   }
 }
 
+
 /**
  * Updates an installation's status to "approved" by ID if it's currently "pending".
  *

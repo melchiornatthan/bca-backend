@@ -674,12 +674,16 @@ async function updateDismantle(body) {
     );
     if (updateDismantle[0] === 1) {
       // Delete the corresponding installation record
-      const deleteInstallation = await Installation.destroy({
+      const updateInstallation = await Installation.update(
+        {status: 'dismantled'
+      }, 
+      {
         where: {
           id: installation_id,
         },
+        
       });
-      return deleteInstallation;
+      return updateInstallation;
     }
   } catch (error) {
     console.error('Error updating Dismantle list:', error);

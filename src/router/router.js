@@ -91,6 +91,9 @@ router.get("/locationByArea/:location", controller.getLocationByArea);
 router.post("/installation", controller.getInstallationInfo);
 
 router.get("/filtered-installation", controller.getFilteredInstallation);
+
+router.get("/providerCount", controller.getProviderCount);
+router.get("/requestsCount", controller.getRequestCount);
 /**
  * Route to get a list of SLA data.
  *

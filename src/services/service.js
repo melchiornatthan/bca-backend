@@ -8,6 +8,8 @@ const Price = require("../models/price");
 const Installation = require("../models/installations");
 const Relocation = require("../models/relocation");
 const Dismantle = require("../models/dismantle");
+const { Op } = require('sequelize');
+const sequelize = require('sequelize');
 
 /**
  * Registers a new user.
@@ -219,6 +221,69 @@ async function getProviders() {
   }
 }
 
+async function getRequestCount() {
+  try {
+    // Retrieve a list of provider data from the database
+    const installation = await Installation.count({
+      where: {
+        status: ['pending'],
+      },
+    });
+
+    const relocation = await Relocation.count({
+      where: {
+        status: ['pending'],
+      },
+    });
+
+    const dismantle = await Dismantle.count({
+      where: {
+        status: ['pending'],
+      },
+    });
+ 
+     return {
+        installation : installation,
+        relocation : relocation,
+        dismantle : dismantle,
+     };
+  } catch (error) {
+    throw new Error("Error getting count");
+  }
+}
+
+async function getProvidersCount() {
+  try {
+    // Retrieve a list of provider data from the database
+    const allProviders = await Provider.findAll({ attributes: ['provider'] });
+    const installationCounts = await Installation.findAll({
+      attributes: ['provider', [sequelize.fn('count', sequelize.col('provider')), 'count']],
+      group: ['provider'],
+      where: {
+        status: ['approved'],
+      },
+      raw: true,
+    });
+
+     // Create an object to store provider counts
+     const providerCounts = {};
+
+     // Initialize provider counts with 0 for all providers
+     allProviders.forEach(provider => {
+       providerCounts[provider.provider] = 0;
+     });
+ 
+     // Update provider counts based on the Installation data
+     installationCounts.forEach(count => {
+       providerCounts[count.provider] = count.count;
+     });
+ 
+     return providerCounts;
+  } catch (error) {
+    throw new Error("Error getting count");
+  }
+}
+
 /**
  * Gets installation information based on location.
  *
@@ -306,18 +371,35 @@ async function getInstallationInfo(location) {
         },
       ],
       order: [['price', 'ASC']],
-      limit: 1,
+      limit: 2,
     });
 
     if (lowestPrice.length === 0) {
       throw new Error("No prices found for the selected providers.");
     }
 
-    const resultProviderIds = lowestPrice.map((price) => price.id_prov);
+    let bestProvider = null;
+    let lowestCount = Infinity;
 
+    if (lowestPrice.length === 2) {
+      for (const provider of lowestPrice) {
+        const providerCount = await Installation.count({
+          where: {
+            provider_id: provider.id_prov,
+            status: ['approved', 'pending'],
+          },
+        });
+
+        if (providerCount < lowestCount) {
+          lowestCount = providerCount;
+          bestProvider = provider;
+          bestProviderSlaDays = lowestSla.find(sla => sla.id_prov === provider.id_prov).days;
+        }
+      }
+    }
     return {
-      lowestPrice,
-      days: lowestSla.filter((sla) => resultProviderIds.includes(sla.id_prov)).map((sla) => sla.days),
+      bestProvider,
+      days: bestProviderSlaDays,
     };
   } catch (error) {
     throw new Error(`Error performing installation: ${error.message}`);
@@ -339,6 +421,7 @@ async function createInstallation(body) {
   const installationInfo = await getInstallationInfo(area);
 
   try {
+    console.log(installationInfo.bestProvider.dataValues);
     // Create a new installation record in the database
     const installation = await Installation.create({
       createdAt: createdAt,
@@ -346,13 +429,13 @@ async function createInstallation(body) {
       address,
       batchid: batchid,
       branch_pic,
-      price_id: installationInfo.lowestPrice[0].dataValues.id_price,
+      price_id: installationInfo.bestProvider.dataValues.id_price,
       area,
-      days: installationInfo.days[0],
-      provider: installationInfo.lowestPrice[0].provider.dataValues.provider,
-      provider_id: installationInfo.lowestPrice[0].id_prov,
-      price: installationInfo.lowestPrice[0].dataValues.price,
-      area_id: installationInfo.lowestPrice[0].dataValues.id_loc,
+      days: installationInfo.days,
+      provider: installationInfo.bestProvider.dataValues.provider.dataValues.provider,
+      provider_id: installationInfo.bestProvider.dataValues.id_prov,
+      price: installationInfo.bestProvider.dataValues.price,
+      area_id: installationInfo.bestProvider.dataValues.id_loc,
     });
 
     console.log('Installation created:', installation.toJSON());
@@ -372,7 +455,7 @@ async function createInstallation(body) {
  */
 async function createRelocation(body) {
   // Destructure input data
-  const { old_location, new_location, old_area_id, new_area_id, old_branch_pic, new_branch_pic,old_communication, new_communication,old_area, new_area, old_address, new_address, installation_id } = body;
+  const { old_location, new_location, old_area_id, new_area_id, old_branch_pic, new_branch_pic, old_communication, new_communication, old_area, new_area, old_address, new_address, installation_id } = body;
   console.log(old_location)
   try {
     // Create a new relocation record in the database
@@ -421,7 +504,7 @@ async function createDismantle(body) {
   // Destructure input data
   const { installation_id } = body;
   try {
-    
+
     const getLocation = await Installation.findOne({
       attributes: ['location'],
       where: {
@@ -434,7 +517,7 @@ async function createDismantle(body) {
       location: getLocation.location,
     });
 
-    
+
     const updateInstallation = await Installation.update(
       {
         dismantle_status: true,
@@ -475,18 +558,56 @@ async function getInstallationList() {
 async function getInstallationFiltered() {
   try {
     // Fetch all installation records from the database
-    const installations = await Installation.findAll({
-      order:  [['createdAt', 'DESC']],
+    const approvedInstallations = await Installation.findAll({
+      attributes: ['batchid'],
+      order: [['createdAt', 'DESC']],
       where: {
         status: "approved",
       }
     });
-    return installations;
+
+    const pendingInstallations = await Installation.findAll({
+      attributes: ['batchid'],
+      order: [['createdAt', 'DESC']],
+      where: {
+        status: "pending",
+      }
+    });
+
+    const installationsWithSameBatchId = [];
+
+    // Iterate through 'approvedInstallations' and 'pendingInstallations'
+    approvedInstallations.forEach(approvedInstallation => {
+      const batchIdToSearch = approvedInstallation.batchid;
+      
+      // Find matching installations in 'pendingInstallations' based on 'batchid'
+      const matchingPendingInstallation = pendingInstallations.find(pendingInstallation => pendingInstallation.batchid === batchIdToSearch);
+      
+      if (matchingPendingInstallation) {
+        // If a matching 'pendingInstallation' is found, add it to the result array
+        installationsWithSameBatchId.push(batchIdToSearch);
+      }
+    });
+    
+    console.log(installationsWithSameBatchId);
+    const installationsWithUniqueBatchId = await Installation.findAll({
+      where: {
+        batchid: {
+          [Op.not]: installationsWithSameBatchId,
+        },
+        status: "approved",
+      }
+    });
+
+    return installationsWithUniqueBatchId;
+    
   } catch (error) {
     console.error('Error fetching installation list:', error);
     throw new Error('Error fetching installation list');
   }
 }
+
+
 
 /**
  * Gets an installation by its ID.
@@ -504,7 +625,7 @@ async function getInstallationById(id) {
       },
     });
     return installation;
-  }catch (error) {
+  } catch (error) {
     console.error('Error fetching installation list:', error);
     throw new Error('Error fetching installation list');
   }
@@ -520,7 +641,7 @@ async function getLocationByName(location) {
       },
     });
     return locationId;
-  }catch (error) {
+  } catch (error) {
     console.error('Error fetching Location list:', error);
     throw new Error('Error fetching Location list');
   }
@@ -530,10 +651,10 @@ async function getRelocations() {
   try {
     // Fetch all installation records matching the provided ID
     const RelocList = await Relocation.findAll({
-     order: [['status', 'ASC'], ['createdAt', 'DESC']],
+      order: [['status', 'ASC'], ['createdAt', 'DESC']],
     });
     return RelocList;
-  }catch (error) {
+  } catch (error) {
     console.error('Error fetching Relocation list:', error);
     throw new Error('Error fetching Relocation list');
   }
@@ -543,12 +664,12 @@ async function getRelocationsById(id) {
   try {
     // Fetch all installation records matching the provided ID
     const RelocList = await Relocation.findOne({
-    where: {
-      id: id,
-    },
+      where: {
+        id: id,
+      },
     });
     return RelocList;
-  }catch (error) {
+  } catch (error) {
     console.error('Error fetching Relocation list:', error);
     throw new Error('Error fetching Relocation list');
   }
@@ -558,16 +679,16 @@ async function getDismantles() {
   try {
     // Fetch all installation records matching the provided ID
     const DismantleList = await Dismantle.findAll({
-     order: [['status', 'ASC'], ['createdAt', 'DESC']],
-     include: [
-      {
-        model: Installation,
-        attributes: ['location'],
-        required: true,
-      },]
+      order: [['status', 'ASC'], ['createdAt', 'DESC']],
+      include: [
+        {
+          model: Installation,
+          attributes: ['location'],
+          required: true,
+        },]
     });
     return DismantleList;
-  }catch (error) {
+  } catch (error) {
     console.error('Error fetching Dismantle list:', error);
     throw new Error('Error fetching Dismantle list');
   }
@@ -630,11 +751,11 @@ async function updateRelocation(body) {
       // Update the corresponding installation information with the new location and address
       const updateInstallation = await Installation.update(
         {
-          location : new_location,
+          location: new_location,
           address: new_address,
           area: new_area,
           area_id: new_area_id,
-          branch_pic:new_branch_pic,
+          branch_pic: new_branch_pic,
           communication: new_communication,
           relocation_status: false,
         },
@@ -677,14 +798,15 @@ async function updateDismantle(body) {
     if (updateDismantle[0] === 1) {
       // Delete the corresponding installation record
       const updateInstallation = await Installation.update(
-        {status: 'dismantled'
-      }, 
-      {
-        where: {
-          id: installation_id,
+        {
+          status: 'dismantled'
         },
-        
-      });
+        {
+          where: {
+            id: installation_id,
+          },
+
+        });
       return updateInstallation;
     }
   } catch (error) {
@@ -837,6 +959,44 @@ async function overrideInstallation(body) {
         },
       }
     );
+
+    // const updateTable = await updateInstallationsProvider();
+    return results;
+  } catch (error) {
+    console.error('Error updating installation list:', error);
+    throw new Error('Error updating installation list');
+  }
+}
+
+async function updateInstallationsProvider() {
+  try {
+    // Update the installation with new information and set its status to "approved" if it's currently "pending"
+    const results = await Installation.findAll(
+      {
+        where: {
+          status: "pending",
+        },
+      }
+    );
+
+    results.forEach(async (installation) => {
+      const newProvider = await getInstallationInfo(installation.area);
+      await Installation.update(
+        {
+          provider: newProvider.bestProvider.dataValues.provider.dataValues.provider,
+          provider_id: newProvider.bestProvider.dataValues.provider.dataValues.id_prov,
+          days: newProvider.days,
+          price_id: newProvider.bestProvider.dataValues.provider.dataValues.id_price,
+          price: newProvider.bestProvider.dataValues.provider.dataValues.price,
+        },
+        {
+          where: {
+            id: installation.id,
+          },
+        }
+      );
+      console.log(installation.id)
+    });
     return results;
   } catch (error) {
     console.error('Error updating installation list:', error);
@@ -863,7 +1023,7 @@ async function getInstallationProvider(location, id_prov) {
           attributes: ['provider'],
           required: true,
           where: {
-            id:id_prov
+            id: id_prov
           }
         },
       ],
@@ -962,6 +1122,7 @@ module.exports = {
   createInstallation,
   createRelocation,
   createDismantle,
+  getProvidersCount,
   updateRelocation,
   getProvidersbyArea,
   getRelocationsById,
@@ -969,6 +1130,7 @@ module.exports = {
   getInstallationById,
   getDismantles,
   getLocations,
+  getRequestCount,
   getRelocations,
   getBatchId,
   getLocationByName,

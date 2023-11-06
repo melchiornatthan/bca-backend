@@ -223,6 +223,14 @@ function updateDismantle(req, res) {
   handleRequestResponse(req, res, query.updateDismantle);
 }
 
+function getProviderCount(req, res) {
+  handleRequestResponse(req, res, query.getProvidersCount);
+}
+
+function getRequestCount(req, res) {
+  handleRequestResponse(req, res, query.getRequestCount);
+}
+
 /**
  * Initiates a dismantle request by invoking the 'createDismantle' query function.
  * @param {Object} req - The request object.
@@ -286,6 +294,7 @@ module.exports = {
   getInstallationsbyBatchID,
   getInstallationsProviders,
   loginUser,
+  getRequestCount,
   getCoverageData,
   getBatchId,
   getInstallationsById,
@@ -302,6 +311,7 @@ module.exports = {
   getFilteredInstallation,
   getDismantles,
   getRelocations,
+  getProviderCount,
   getRelocationsById,
   updateDismantle,
 };

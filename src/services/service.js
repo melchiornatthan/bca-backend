@@ -10,6 +10,7 @@ const Relocation = require("../models/relocation");
 const Dismantle = require("../models/dismantle");
 const { Op } = require('sequelize');
 const sequelize = require('sequelize');
+const e = require("express");
 
 /**
  * Registers a new user.
@@ -438,8 +439,10 @@ async function createInstallation(body) {
       area_id: installationInfo.bestProvider.dataValues.id_loc,
     });
 
-    console.log('Installation created:', installation.toJSON());
-    return installation;
+    
+    return {
+      message: "Installation created successfully",
+    };
   } catch (error) {
     console.error('Error creating installation:', error);
     throw new Error('Error creating installation');
@@ -458,6 +461,17 @@ async function createRelocation(body) {
   const { old_location, new_location, old_area_id, new_area_id, old_branch_pic, new_branch_pic, old_communication, new_communication, old_area, new_area, old_address, new_address, installation_id } = body;
   console.log(old_location)
   try {
+    const findInstallation = await Installation.findOne({
+      where: {
+        id: installation_id,
+      },
+    });
+    if (!findInstallation) {
+      return {
+        message: "Installation not found",
+      }
+      throw new Error("Installation not found");
+    }else{
     // Create a new relocation record in the database
     const relocation = await Relocation.create({
       old_location,
@@ -486,7 +500,10 @@ async function createRelocation(body) {
       }
     );
 
-    return updateInstallation;
+    return {
+      message: "Relocation created successfully",
+    };
+  }
   } catch (error) {
     console.error('Error creating Relocation:', error);
     throw new Error('Error creating Relocation');
@@ -504,20 +521,25 @@ async function createDismantle(body) {
   // Destructure input data
   const { installation_id } = body;
   try {
-
+    
     const getLocation = await Installation.findOne({
       attributes: ['location'],
       where: {
         id: installation_id,
       },
     });
+
+    if(!getLocation){
+      return {
+        message: "Installation not found",
+      }
+      throw new Error("Installation not found");
+    }else{
     // Create a new dismantle record in the database
     const dismantle = await Dismantle.create({
       installation_id,
       location: getLocation.location,
     });
-
-
     const updateInstallation = await Installation.update(
       {
         dismantle_status: true,
@@ -530,6 +552,7 @@ async function createDismantle(body) {
     );
 
     return getLocation;
+    }
   } catch (error) {
     console.error('Error creating Dismantle:', error);
     throw new Error('Error creating Dismantle');
@@ -546,6 +569,7 @@ async function getInstallationList() {
   try {
     // Fetch all installation records from the database
     const installations = await Installation.findAll({
+      attributes: ['id', 'location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area', 'relocation_status', 'dismantle_status'],
       order: [['status', 'ASC'], ['createdAt', 'DESC']],
     });
     return installations;
@@ -591,6 +615,7 @@ async function getInstallationFiltered() {
     
     console.log(installationsWithSameBatchId);
     const installationsWithUniqueBatchId = await Installation.findAll({
+      attributes: ['id', 'location', 'communication', 'address', 'branch_pic', 'provider', 'area', 'relocation_status', 'dismantle_status'],
       where: {
         batchid: {
           [Op.not]: installationsWithSameBatchId,
@@ -620,6 +645,7 @@ async function getInstallationById(id) {
   try {
     // Fetch all installation records matching the provided ID
     const installation = await Installation.findAll({
+      attributes: ['id', 'area_id','location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area', 'relocation_status', 'dismantle_status'],
       where: {
         id: id,
       },
@@ -922,6 +948,7 @@ async function getInstallationbyBatch(batchid) {
   try {
     // Get a list of installations for the specified batch ID
     const getBatchList = await Installation.findAll({
+      attributes: ['id', 'location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area'],
       where: { batchid: batchid },
     });
     return getBatchList;

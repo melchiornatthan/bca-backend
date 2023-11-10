@@ -18,6 +18,10 @@ const Dismantle = sequelize.define('dismantles', {
     type: Sequelize.INTEGER,
     allowNull: false,
   },
+  batchid: {
+    type: Sequelize.BIGINT,
+    allowNull: false,
+  },
   location: {
     type: Sequelize.STRING,
     allowNull: false,

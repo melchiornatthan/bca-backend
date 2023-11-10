@@ -67,6 +67,10 @@ const Relocation = sequelize.define('relocations', {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  batchid: {
+    type: Sequelize.BIGINT,
+    allowNull: false,
+  },
 });
 
 module.exports = Relocation;

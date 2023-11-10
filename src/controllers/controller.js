@@ -29,10 +29,17 @@ function registerUser(req, res) {
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
  */
-function getBatchId(req, res) {
-  handleRequestResponse(req, res, query.getBatchId);
+function getInstallationBatchId(req, res) {
+  handleRequestResponse(req, res, query.getInstallationBatchId);
 }
 
+function getRelocationBatchId(req, res) {
+  handleRequestResponse(req, res, query.getRelocationBatchId);
+}
+
+function getDismantleBatchId(req, res) {
+  handleRequestResponse(req, res, query.getDismantleBatchId);
+}
 /**
  * Logs a user in by invoking the 'loginUser' query function.
  * @param {Object} req - The request object.
@@ -155,6 +162,14 @@ function getBatchInstallations(req, res) {
   handleRequestResponse(req, res, query.getBatchInstallation);
 }
 
+function getBatchRelocations(req, res) {
+  handleRequestResponse(req, res, query.getBatchRelocation);
+}
+
+function getBatchDismantle(req, res) {
+  handleRequestResponse(req, res, query.getBatchDismantle);
+}
+
 function getFilteredInstallation(req, res) {
   handleRequestResponse(req, res, query.getInstallationFiltered);
 }
@@ -214,6 +229,10 @@ function updateRelocations(req, res) {
   handleRequestResponse(req, res, query.updateRelocation);
 }
 
+function testing(req, res) {
+  handleRequestResponse(req, res, query.getInstallationInfoNew);
+}
+
 /**
  * Updates dismantle records by invoking the 'updateDismantle' query function.
  * @param {Object} req - The request object.
@@ -263,6 +282,35 @@ async function getInstallationsbyBatchID(req, res) {
     res.json(error);
   }
 }
+async function getDismantlebyBatchID(req, res) {
+  try {
+    const batchid = req.params.batchid;
+    const result = await query.getDismantlebyBatchId(batchid);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
+}
+
+async function getRelocationbyBatchId(req, res) {
+  try {
+    const batchid = req.params.batchid;
+    const result = await query.getRelocationbyBatchId(batchid);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
+}
+
+async function getInstallationbyLocation(req, res) {
+  try {
+    const location = req.params.location;
+    const result = await query.getInstallationbyLocation(location);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
+}
 
 async function getRelocationsById(req, res) {
   try {
@@ -273,6 +321,9 @@ async function getRelocationsById(req, res) {
     res.json(error);
   }
 }
+
+
+
 
 async function getLocationByArea(req, res) {
   try {
@@ -296,7 +347,7 @@ module.exports = {
   loginUser,
   getRequestCount,
   getCoverageData,
-  getBatchId,
+  getInstallationBatchId,
   getInstallationsById,
   getPriceData,
   getSLAData,
@@ -310,8 +361,16 @@ module.exports = {
   updateRelocations,
   getFilteredInstallation,
   getDismantles,
+  getRelocationBatchId,
   getRelocations,
+  getBatchRelocations,
   getProviderCount,
   getRelocationsById,
+  getRelocationbyBatchId,
   updateDismantle,
+  getDismantleBatchId,
+  getBatchDismantle,
+  getInstallationbyLocation,
+  getDismantlebyBatchID,
+  testing,
 };

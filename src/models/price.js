@@ -2,6 +2,8 @@ const sequelize = require('../database/connection');
 const Sequelize = require('sequelize');
 const Location = require('./locations');
 const Provider = require('./provider');
+const Coverage = require('./coverage');
+const Sla = require('./sla');
 
 // Define the Price model for the "prices" table
 const Price = sequelize.define('prices', {

@@ -123,6 +123,9 @@ router.get("/dismantles", controller.getDismantles);
 
 router.get("/relocations/:id", controller.getRelocationsById);
 
+
+router.get("/installationByLocation/:location", controller.getInstallationbyLocation);
+
 /**
  * Route to submit an installation request.
  *
@@ -138,6 +141,8 @@ router.post("/installation-request", controller.installationRequest);
  * @param {InstallationRequest} request.body - The relocation request object.
  */
 router.post("/relocation-request", controller.relocationRequest);
+
+router.post("/testing", controller.testing);
 
 /**
  * Route to submit a dismantle request.
@@ -212,8 +217,9 @@ router.post("/installation-override", controller.overrideInstallations);
  * @name GET /getBatchId
  * @returns {string} - The batch ID.
  */
-router.get("/getBatchId", controller.getBatchId);
-
+router.get("/getInstallationBatchId", controller.getInstallationBatchId);
+router.get("/getRelocationBatchId", controller.getRelocationBatchId);
+router.get("/getDismantleBatchId", controller.getDismantleBatchId);
 /**
  * Route to get installations by batch ID.
  *
@@ -222,7 +228,8 @@ router.get("/getBatchId", controller.getBatchId);
  * @returns {InstallationData[]} - A list of installations by batch ID.
  */
 router.get("/getInstallationsbyBatchID/:batchid", controller.getInstallationsbyBatchID);
-
+router.get("/getRelocationsbyBatchID/:batchid", controller.getRelocationbyBatchId);
+router.get("/getDismantlebyBatchID/:batchid", controller.getDismantlebyBatchID);
 /**
  * Route to get batch installations.
  *
@@ -231,6 +238,9 @@ router.get("/getInstallationsbyBatchID/:batchid", controller.getInstallationsbyB
  */
 router.get("/getBatchInstallations", controller.getBatchInstallations);
 
+router.get("/getBatchRelocation", controller.getBatchRelocations);
+
+router.get("/getBatchDismantle", controller.getBatchDismantle);
 /**
  * Route to get providers by area.
  *

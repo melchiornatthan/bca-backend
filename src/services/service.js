@@ -95,6 +95,28 @@ async function getLocations() {
   }
 }
 
+async function getInstallationbyLocation(location) {
+  try {
+    // Retrieve a list of locations from the database
+    const Installations = await Installation.findAll({
+      attributes: ['id', 'location', 'communication', 'address', 'branch_pic', 'status', 'provider', 'area'],
+      where: {
+        status: 'approved',
+        dismantle_status: false,
+        relocation_status: false,
+        location: {
+          [Op.iLike]: `%${location}%`, // Using Op.iLike for case-insensitive matching
+        },
+      },
+    });
+
+    return Installations;
+  } catch (error) {
+    throw new Error("Error getting locations");
+  }
+}
+
+
 
 /**
  * Gets a list of SLA data.
@@ -242,12 +264,12 @@ async function getRequestCount() {
         status: ['pending'],
       },
     });
- 
-     return {
-        installation : installation,
-        relocation : relocation,
-        dismantle : dismantle,
-     };
+
+    return {
+      installation: installation,
+      relocation: relocation,
+      dismantle: dismantle,
+    };
   } catch (error) {
     throw new Error("Error getting count");
   }
@@ -266,20 +288,20 @@ async function getProvidersCount() {
       raw: true,
     });
 
-     // Create an object to store provider counts
-     const providerCounts = {};
+    // Create an object to store provider counts
+    const providerCounts = {};
 
-     // Initialize provider counts with 0 for all providers
-     allProviders.forEach(provider => {
-       providerCounts[provider.provider] = 0;
-     });
- 
-     // Update provider counts based on the Installation data
-     installationCounts.forEach(count => {
-       providerCounts[count.provider] = count.count;
-     });
- 
-     return providerCounts;
+    // Initialize provider counts with 0 for all providers
+    allProviders.forEach(provider => {
+      providerCounts[provider.provider] = 0;
+    });
+
+    // Update provider counts based on the Installation data
+    installationCounts.forEach(count => {
+      providerCounts[count.provider] = count.count;
+    });
+
+    return providerCounts;
   } catch (error) {
     throw new Error("Error getting count");
   }
@@ -348,9 +370,6 @@ async function getInstallationInfo(location) {
       throw new Error("No SLAs found for the selected providers.");
     }
 
-    // Extract Provider IDs with the Lowest SLA
-    const lowestSlaProviderIds = lowestSla.map((sla) => sla.id_prov);
-
     // Query for the Lowest Price
     const lowestPrice = await Price.findAll({
       where: {
@@ -407,6 +426,126 @@ async function getInstallationInfo(location) {
   }
 }
 
+async function getInstallationInfoNew(location) {
+ 
+  try {
+    const Providers = await Provider.findAll();
+    const filteredProvider = [];
+    for (const provider of Providers) {
+      const availableProvider = await Installation.count({
+        where : {
+          provider_id: provider.id,
+          status: ['approved', 'pending'],
+        },
+      });
+      if (availableProvider < 2550) {
+        filteredProvider.push(provider.id);
+      }
+    }
+
+    const CoverageTable = await Coverage.findAll({
+      attributes: ['avail','id_loc', 'id_prov'],
+      include: [
+        {
+          model: Location,
+          attributes: ['location'],
+          where: {
+            location : "Jawa Timur",
+          },
+          required: true,
+        },
+        {
+          model: Provider,
+          attributes: ['provider'],
+          where:{
+            id: filteredProvider,
+          },
+          required: true,
+        },
+      ],
+    });
+
+    const AvailableProviders = CoverageTable.map((provider) => provider.id_prov);
+
+     const lowestSla = await Sla.findAll({
+      where: {
+        id_prov: AvailableProviders,
+      },
+      include: [
+        {
+          model: Location,
+          attributes: ['location'],
+          where: {
+           location: "Jawa Timur",
+          },
+          required: true,
+        },
+        {
+          model: Provider,
+          attributes: ['provider'],
+          required: true,
+        },
+      ],
+      attributes: ['days', 'id_prov'],
+      order: [['days', 'ASC']],
+    });
+
+    const bestSla = lowestSla[0];
+    const SameSLAS = [];
+    for (const provider of lowestSla) {
+      if (provider.days === bestSla.days) {
+        SameSLAS.push(provider.id_prov);
+      }
+    }
+
+    const lowestPrice = await Price.findAll({
+      attributes: ['id_price', 'price', 'id_prov','id_loc'],
+      where: {
+        id_prov: SameSLAS,
+      },
+      order: [['price', 'ASC']],
+    });
+
+    const bestPrice = lowestPrice[0];
+    const samePrice = [];
+    for (const provider of lowestPrice) {
+      if (provider.price === bestPrice.price) {
+        samePrice.push(provider.id_prov);
+      }
+    }
+   
+    let bestProvider = null;
+    let lowestCount = Infinity;
+    for (const provider of samePrice) {
+      const providerCount = await Installation.count({
+        where: {
+          provider_id: provider,
+          status: ['approved', 'pending'],
+        },
+      });
+
+      if (providerCount < lowestCount) {
+        lowestCount = providerCount;
+        bestProvider = provider;
+        bestProviderDays = lowestSla.find(sla => sla.id_prov === provider);
+        bestProviderPrice = lowestPrice.find(sla => sla.id_prov === provider);
+      }
+    }
+  
+
+    
+    // Convert the combined data map to an 
+    return {
+      filteredProvider,
+      bestProviderDays,
+      bestProviderPrice,
+     } ;
+
+  } catch (error) {
+    throw new Error(`Error performing installation: ${error.message}`);
+  }
+}
+
 /**
  * Creates a new installation based on provided data.
  *
@@ -419,10 +558,10 @@ async function createInstallation(body) {
   const { location, address, branch_pic, area, batchid, createdAt } = body;
 
   // Fetch installation information based on the provided area
-  const installationInfo = await getInstallationInfo(area);
+  const installationInfo = await getInstallationInfoNew(area);
+ 
 
   try {
-    console.log(installationInfo.bestProvider.dataValues);
     // Create a new installation record in the database
     const installation = await Installation.create({
       createdAt: createdAt,
@@ -430,18 +569,18 @@ async function createInstallation(body) {
       address,
       batchid: batchid,
       branch_pic,
-      price_id: installationInfo.bestProvider.dataValues.id_price,
+      price_id: installationInfo.bestProviderPrice.id_price,
       area,
-      days: installationInfo.days,
-      provider: installationInfo.bestProvider.dataValues.provider.dataValues.provider,
-      provider_id: installationInfo.bestProvider.dataValues.id_prov,
-      price: installationInfo.bestProvider.dataValues.price,
-      area_id: installationInfo.bestProvider.dataValues.id_loc,
+      days: installationInfo.bestProviderDays.days,
+      provider: installationInfo.bestProviderDays.provider.provider,
+      provider_id: installationInfo.bestProviderDays.id_prov,
+      price: installationInfo.bestProviderPrice.price,
+      area_id: installationInfo.bestProviderPrice.id_loc,
     });
 
-    
+
     return {
-      message: "Installation created successfully",
+      message: installation
     };
   } catch (error) {
     console.error('Error creating installation:', error);
@@ -458,7 +597,7 @@ async function createInstallation(body) {
  */
 async function createRelocation(body) {
   // Destructure input data
-  const { old_location, new_location, old_area_id, new_area_id, old_branch_pic, new_branch_pic, old_communication, new_communication, old_area, new_area, old_address, new_address, installation_id } = body;
+  const { old_location, new_location, old_area_id, new_area_id, old_branch_pic, new_branch_pic, old_communication, new_communication, old_area, new_area, old_address, new_address, installation_id, batchid, createdAt } = body;
   console.log(old_location)
   try {
     const findInstallation = await Installation.findOne({
@@ -470,40 +609,41 @@ async function createRelocation(body) {
       return {
         message: "Installation not found",
       }
-      throw new Error("Installation not found");
-    }else{
-    // Create a new relocation record in the database
-    const relocation = await Relocation.create({
-      old_location,
-      new_location,
-      old_area_id,
-      new_area_id,
-      old_branch_pic,
-      new_branch_pic,
-      old_communication,
-      new_communication,
-      old_area,
-      new_area,
-      old_address,
-      new_address,
-      installation_id,
-    });
+    } else {
+      // Create a new relocation record in the database
+      const relocation = await Relocation.create({
+        old_location,
+        new_location,
+        createdAt,
+        old_area_id,
+        batchid,
+        new_area_id,
+        old_branch_pic,
+        new_branch_pic,
+        old_communication,
+        new_communication,
+        old_area,
+        new_area,
+        old_address,
+        new_address,
+        installation_id,
+      });
 
-    const updateInstallation = await Installation.update(
-      {
-        relocation_status: true,
-      },
-      {
-        where: {
-          id: installation_id,
+      const updateInstallation = await Installation.update(
+        {
+          relocation_status: true,
         },
-      }
-    );
+        {
+          where: {
+            id: installation_id,
+          },
+        }
+      );
 
-    return {
-      message: "Relocation created successfully",
-    };
-  }
+      return {
+        message: "Relocation created successfully",
+      };
+    }
   } catch (error) {
     console.error('Error creating Relocation:', error);
     throw new Error('Error creating Relocation');
@@ -519,9 +659,9 @@ async function createRelocation(body) {
  */
 async function createDismantle(body) {
   // Destructure input data
-  const { installation_id } = body;
+  const { installation_id, createdAt, batchid } = body;
   try {
-    
+
     const getLocation = await Installation.findOne({
       attributes: ['location'],
       where: {
@@ -529,29 +669,31 @@ async function createDismantle(body) {
       },
     });
 
-    if(!getLocation){
+    if (!getLocation) {
       return {
         message: "Installation not found",
       }
       throw new Error("Installation not found");
-    }else{
-    // Create a new dismantle record in the database
-    const dismantle = await Dismantle.create({
-      installation_id,
-      location: getLocation.location,
-    });
-    const updateInstallation = await Installation.update(
-      {
-        dismantle_status: true,
-      },
-      {
-        where: {
-          id: installation_id,
+    } else {
+      // Create a new dismantle record in the database
+      const dismantle = await Dismantle.create({
+        installation_id,
+        location: getLocation.location,
+        createdAt,
+        batchid,
+      });
+      const updateInstallation = await Installation.update(
+        {
+          dismantle_status: true,
         },
-      }
-    );
+        {
+          where: {
+            id: installation_id,
+          },
+        }
+      );
 
-    return getLocation;
+      return getLocation;
     }
   } catch (error) {
     console.error('Error creating Dismantle:', error);
@@ -579,9 +721,15 @@ async function getInstallationList() {
   }
 }
 
+/**
+ * Retrieves a filtered list of installations based on specific criteria, including both approved and pending installations.
+ *
+ * @returns {Promise<Array>} - An array containing unique approved installations that do not have a pending counterpart.
+ * @throws {Error} - Throws an error if there's an issue fetching the installation list.
+ */
 async function getInstallationFiltered() {
   try {
-    // Fetch all installation records from the database
+    // Fetch approved installations
     const approvedInstallations = await Installation.findAll({
       attributes: ['batchid'],
       order: [['createdAt', 'DESC']],
@@ -590,6 +738,7 @@ async function getInstallationFiltered() {
       }
     });
 
+    // Fetch pending installations
     const pendingInstallations = await Installation.findAll({
       attributes: ['batchid'],
       order: [['createdAt', 'DESC']],
@@ -598,22 +747,25 @@ async function getInstallationFiltered() {
       }
     });
 
+    // Create an array to store batch IDs with both approved and pending installations
     const installationsWithSameBatchId = [];
 
-    // Iterate through 'approvedInstallations' and 'pendingInstallations'
+    // Iterate through approved installations and find matching pending installations
     approvedInstallations.forEach(approvedInstallation => {
       const batchIdToSearch = approvedInstallation.batchid;
-      
-      // Find matching installations in 'pendingInstallations' based on 'batchid'
+
+      // Find matching installations in pending installations based on batchid
       const matchingPendingInstallation = pendingInstallations.find(pendingInstallation => pendingInstallation.batchid === batchIdToSearch);
-      
+
       if (matchingPendingInstallation) {
-        // If a matching 'pendingInstallation' is found, add it to the result array
+        // If a matching pending installation is found, add its batch ID to the result array
         installationsWithSameBatchId.push(batchIdToSearch);
       }
     });
-    
+
     console.log(installationsWithSameBatchId);
+
+    // Fetch unique approved installations that do not have a pending counterpart
     const installationsWithUniqueBatchId = await Installation.findAll({
       attributes: ['id', 'location', 'communication', 'address', 'branch_pic', 'provider', 'area', 'relocation_status', 'dismantle_status'],
       where: {
@@ -625,12 +777,13 @@ async function getInstallationFiltered() {
     });
 
     return installationsWithUniqueBatchId;
-    
+
   } catch (error) {
     console.error('Error fetching installation list:', error);
     throw new Error('Error fetching installation list');
   }
 }
+
 
 
 
@@ -645,10 +798,11 @@ async function getInstallationById(id) {
   try {
     // Fetch all installation records matching the provided ID
     const installation = await Installation.findAll({
-      attributes: ['id', 'area_id','location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area', 'relocation_status', 'dismantle_status'],
+      attributes: ['id', 'area_id', 'location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area', 'relocation_status', 'dismantle_status'],
       where: {
         id: id,
       },
+      limit: 1,
     });
     return installation;
   } catch (error) {
@@ -657,68 +811,100 @@ async function getInstallationById(id) {
   }
 }
 
+
+/**
+ * Retrieves the location ID for the given location name, considering specific criteria.
+ *
+ * @param {string} location - The name of the location.
+ * @returns {Promise<Array>} - An array containing location ID(s) matching the provided name and criteria.
+ * @throws {Error} - Throws an error if there's an issue fetching the location list.
+ */
 async function getLocationByName(location) {
   try {
-    // Fetch all installation records matching the provided ID
-    const locationId = await Location.findAll({
+    // Fetch location records matching the provided name and criteria
+    const locationIds = await Location.findAll({
       attributes: ['id'],
       where: {
         location: location,
+        status: "approved",
+        dismantle_status: false,
+        relocation_status: false,
       },
     });
-    return locationId;
+    return locationIds;
   } catch (error) {
-    console.error('Error fetching Location list:', error);
-    throw new Error('Error fetching Location list');
+    console.error('Error fetching location list:', error);
+    throw new Error('Error fetching location list');
   }
 }
 
+/**
+ * Retrieves a list of relocations, ordered by status and creation date.
+ *
+ * @returns {Promise<Array>} - An array containing relocation records.
+ * @throws {Error} - Throws an error if there's an issue fetching the relocation list.
+ */
 async function getRelocations() {
   try {
-    // Fetch all installation records matching the provided ID
-    const RelocList = await Relocation.findAll({
+    // Fetch relocation records ordered by status and creation date
+    const relocationList = await Relocation.findAll({
       order: [['status', 'ASC'], ['createdAt', 'DESC']],
     });
-    return RelocList;
+    return relocationList;
   } catch (error) {
-    console.error('Error fetching Relocation list:', error);
-    throw new Error('Error fetching Relocation list');
+    console.error('Error fetching relocation list:', error);
+    throw new Error('Error fetching relocation list');
   }
 }
 
+/**
+ * Retrieves a specific relocation record by ID.
+ *
+ * @param {number} id - The ID of the relocation record.
+ * @returns {Promise<object|null>} - An object containing the relocation record with the provided ID, or null if not found.
+ * @throws {Error} - Throws an error if there's an issue fetching the relocation list.
+ */
 async function getRelocationsById(id) {
   try {
-    // Fetch all installation records matching the provided ID
-    const RelocList = await Relocation.findOne({
+    // Fetch a specific relocation record by ID
+    const relocationRecord = await Relocation.findOne({
       where: {
         id: id,
       },
     });
-    return RelocList;
+    return relocationRecord;
   } catch (error) {
-    console.error('Error fetching Relocation list:', error);
-    throw new Error('Error fetching Relocation list');
+    console.error('Error fetching relocation list:', error);
+    throw new Error('Error fetching relocation list');
   }
 }
 
+/**
+ * Retrieves a list of dismantles, ordered by status and creation date, including associated installation information.
+ *
+ * @returns {Promise<Array>} - An array containing dismantle records with associated installation information.
+ * @throws {Error} - Throws an error if there's an issue fetching the dismantle list.
+ */
 async function getDismantles() {
   try {
-    // Fetch all installation records matching the provided ID
-    const DismantleList = await Dismantle.findAll({
+    // Fetch dismantle records ordered by status and creation date, including associated installation information
+    const dismantleList = await Dismantle.findAll({
       order: [['status', 'ASC'], ['createdAt', 'DESC']],
       include: [
         {
           model: Installation,
           attributes: ['location'],
           required: true,
-        },]
+        },
+      ],
     });
-    return DismantleList;
+    return dismantleList;
   } catch (error) {
-    console.error('Error fetching Dismantle list:', error);
-    throw new Error('Error fetching Dismantle list');
+    console.error('Error fetching dismantle list:', error);
+    throw new Error('Error fetching dismantle list');
   }
 }
+
 
 
 /**
@@ -825,7 +1011,8 @@ async function updateDismantle(body) {
       // Delete the corresponding installation record
       const updateInstallation = await Installation.update(
         {
-          status: 'dismantled'
+          status: 'dismantled',
+          dismantle_status: false,
         },
         {
           where: {
@@ -847,7 +1034,7 @@ async function updateDismantle(body) {
  * @returns {Object} The latest batch ID.
  * @throws {Error} If there are issues with getting the batch ID.
  */
-async function getBatchId() {
+async function getInstallationBatchId() {
   try {
     // Get the batch ID of the latest installation
     const getBatchId = await Installation.findOne({
@@ -861,6 +1048,49 @@ async function getBatchId() {
     throw new Error('Error getting batch ID');
   }
 }
+
+/**
+ * Retrieves the batch ID of the latest dismantle.
+ *
+ * @returns {Promise<object|null>} - An object containing the batch ID of the latest dismantle, or null if none exists.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch ID.
+ */
+async function getDismantleBatchId() {
+  try {
+    // Get the batch ID of the latest dismantle
+    const latestDismantle = await Dismantle.findOne({
+      order: [['batchid', 'DESC']],
+      attributes: ['batchid'],
+      limit: 1,
+    });
+    return latestDismantle;
+  } catch (error) {
+    console.error('Error getting dismantle batch ID', error);
+    throw new Error('Error getting dismantle batch ID');
+  }
+}
+
+/**
+ * Retrieves the batch ID of the latest relocation.
+ *
+ * @returns {Promise<object|null>} - An object containing the batch ID of the latest relocation, or null if none exists.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch ID.
+ */
+async function getRelocationBatchId() {
+  try {
+    // Get the batch ID of the latest relocation
+    const latestRelocation = await Relocation.findOne({
+      order: [['batchid', 'DESC']],
+      attributes: ['batchid'],
+      limit: 1,
+    });
+    return latestRelocation;
+  } catch (error) {
+    console.error('Error getting relocation batch ID', error);
+    throw new Error('Error getting relocation batch ID');
+  }
+}
+
 
 /**
  * Gets a list of providers for a specific location.
@@ -922,14 +1152,6 @@ async function getBatchInstallation() {
       return false;
     });
 
-    // Delete duplicate installations
-    for (const installation of getBatchList) {
-      if (!filteredList.some((item) => item.batchid === installation.batchid)) {
-        // Delete the installation with the same batch ID
-        await Installation.destroy({ where: { batchid: installation.batchid } });
-      }
-    }
-
     return filteredList;
   } catch (error) {
     console.error('Error getting batch List', error);
@@ -938,25 +1160,136 @@ async function getBatchInstallation() {
 }
 
 /**
- * Gets a list of installations for a specific batch ID.
+ * Retrieves a list of batch relocations, grouped by batch ID.
  *
- * @param {String} batchid - The batch ID for which to retrieve installations.
- * @returns {Array} A list of installations for the specified batch ID.
- * @throws {Error} If there are issues with retrieving installation data.
+ * @returns {Promise<Array>} - A list of unique batch relocations, ordered by creation date and status.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
+ */
+async function getBatchRelocation() {
+  try {
+    // Get a list of relocations grouped by batch ID, ordered by creation date and status
+    const batchList = await Relocation.findAll({
+      order: [['createdAt', 'DESC'], ['status', 'ASC']],
+      attributes: ['batchid', 'status', 'createdAt'],
+      group: ['batchid', 'status', 'createdAt'],
+    });
+
+    // Create a Set to store unique batch IDs
+    const uniqueBatchIds = new Set();
+
+    // Filter relocations to keep only the first occurrence of each batch ID
+    const filteredList = batchList.filter((relocation) => {
+      if (!uniqueBatchIds.has(relocation.batchid)) {
+        uniqueBatchIds.add(relocation.batchid);
+        return true;
+      }
+      return false;
+    });
+
+    return filteredList;
+  } catch (error) {
+    console.error('Error getting batch relocation list', error);
+    throw new Error('Error getting batch relocation list');
+  }
+}
+
+/**
+ * Retrieves a list of batch dismantles, grouped by batch ID.
+ *
+ * @returns {Promise<Array>} - A list of unique batch dismantles, ordered by creation date and status.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
+ */
+async function getBatchDismantle() {
+  try {
+    // Get a list of dismantles grouped by batch ID, ordered by creation date and status
+    const batchList = await Dismantle.findAll({
+      order: [['createdAt', 'DESC'], ['status', 'ASC']],
+      attributes: ['batchid', 'status', 'createdAt'],
+      group: ['batchid', 'status', 'createdAt'],
+    });
+
+    // Create a Set to store unique batch IDs
+    const uniqueBatchIds = new Set();
+
+    // Filter dismantles to keep only the first occurrence of each batch ID
+    const filteredList = batchList.filter((dismantle) => {
+      if (!uniqueBatchIds.has(dismantle.batchid)) {
+        uniqueBatchIds.add(dismantle.batchid);
+        return true;
+      }
+      return false;
+    });
+
+    return filteredList;
+  } catch (error) {
+    console.error('Error getting batch dismantle list', error);
+    throw new Error('Error getting batch dismantle list');
+  }
+}
+
+
+
+/**
+ * Retrieves a list of installations for the specified batch ID.
+ *
+ * @param {number} batchid - The ID of the batch for which installations are requested.
+ * @returns {Promise<Array>} - A list of installations matching the specified batch ID.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
  */
 async function getInstallationbyBatch(batchid) {
   try {
     // Get a list of installations for the specified batch ID
-    const getBatchList = await Installation.findAll({
+    const installationList = await Installation.findAll({
       attributes: ['id', 'location', 'communication', 'address', 'batchid', 'branch_pic', 'status', 'provider', 'area'],
       where: { batchid: batchid },
     });
-    return getBatchList;
+    return installationList;
   } catch (error) {
-    console.error('Error getting batch List', error);
-    throw new Error('Error getting batch List');
+    console.error('Error getting installation list', error);
+    throw new Error('Error getting installation list');
   }
 }
+
+/**
+ * Retrieves a list of relocations for the specified batch ID.
+ *
+ * @param {number} batchid - The ID of the batch for which relocations are requested.
+ * @returns {Promise<Array>} - A list of relocations matching the specified batch ID.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
+ */
+async function getRelocationbyBatchId(batchid) {
+  try {
+    // Get a list of relocations for the specified batch ID
+    const relocationList = await Relocation.findAll({
+      where: { batchid: batchid },
+    });
+    return relocationList;
+  } catch (error) {
+    console.error('Error getting relocation list', error);
+    throw new Error('Error getting relocation list');
+  }
+}
+
+/**
+ * Retrieves a list of dismantles for the specified batch ID.
+ *
+ * @param {number} batchid - The ID of the batch for which dismantles are requested.
+ * @returns {Promise<Array>} - A list of dismantles matching the specified batch ID.
+ * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
+ */
+async function getDismantlebyBatchId(batchid) {
+  try {
+    // Get a list of dismantles for the specified batch ID
+    const dismantleList = await Dismantle.findAll({
+      where: { batchid: batchid },
+    });
+    return dismantleList;
+  } catch (error) {
+    console.error('Error getting dismantle list', error);
+    throw new Error('Error getting dismantle list');
+  }
+}
+
 
 /**
  * Overrides an installation's data and sets its status to "approved" if it's currently "pending".
@@ -987,7 +1320,8 @@ async function overrideInstallation(body) {
       }
     );
 
-    // const updateTable = await updateInstallationsProvider();
+
+
     return results;
   } catch (error) {
     console.error('Error updating installation list:', error);
@@ -995,45 +1329,18 @@ async function overrideInstallation(body) {
   }
 }
 
-async function updateInstallationsProvider() {
-  try {
-    // Update the installation with new information and set its status to "approved" if it's currently "pending"
-    const results = await Installation.findAll(
-      {
-        where: {
-          status: "pending",
-        },
-      }
-    );
-
-    results.forEach(async (installation) => {
-      const newProvider = await getInstallationInfo(installation.area);
-      await Installation.update(
-        {
-          provider: newProvider.bestProvider.dataValues.provider.dataValues.provider,
-          provider_id: newProvider.bestProvider.dataValues.provider.dataValues.id_prov,
-          days: newProvider.days,
-          price_id: newProvider.bestProvider.dataValues.provider.dataValues.id_price,
-          price: newProvider.bestProvider.dataValues.provider.dataValues.price,
-        },
-        {
-          where: {
-            id: installation.id,
-          },
-        }
-      );
-      console.log(installation.id)
-    });
-    return results;
-  } catch (error) {
-    console.error('Error updating installation list:', error);
-    throw new Error('Error updating installation list');
-  }
-}
-
+/**
+ * Retrieves installation information based on location and provider ID.
+ *
+ * @param {string} location - The location for which installation information is needed.
+ * @param {number} id_prov - The ID of the provider for which information is requested.
+ * @returns {Promise<{lowestPrice: Array, days: Array}>} - An object containing the lowest price and corresponding SLA days.
+ * @throws {Error} - Throws an error if no coverage providers, SLAs, or prices are found.
+ */
 async function getInstallationProvider(location, id_prov) {
   try {
-    console.log(id_prov)
+    console.log(id_prov);
+
     // Query for Coverage Providers
     const coverageProviders = await Coverage.findAll({
       include: [
@@ -1050,8 +1357,8 @@ async function getInstallationProvider(location, id_prov) {
           attributes: ['provider'],
           required: true,
           where: {
-            id: id_prov
-          }
+            id: id_prov,
+          },
         },
       ],
     });
@@ -1122,6 +1429,7 @@ async function getInstallationProvider(location, id_prov) {
       throw new Error("No prices found for the selected providers.");
     }
 
+    // Extract Provider IDs with the Lowest Price
     const resultProviderIds = lowestPrice.map((price) => price.id_prov);
 
     return {
@@ -1132,6 +1440,7 @@ async function getInstallationProvider(location, id_prov) {
     throw new Error(`Error performing installation: ${error.message}`);
   }
 }
+
 
 module.exports = {
   registerUser,
@@ -1159,8 +1468,16 @@ module.exports = {
   getLocations,
   getRequestCount,
   getRelocations,
-  getBatchId,
+  getInstallationBatchId,
   getLocationByName,
+  getRelocationBatchId,
+  getRelocationbyBatchId,
   getInstallationbyBatch,
+  getBatchDismantle,
+  getBatchRelocation,
+  getDismantleBatchId,
+  getInstallationbyLocation,
   getInstallationFiltered,
+  getDismantlebyBatchId,
+  getInstallationInfoNew
 };

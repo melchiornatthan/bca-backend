@@ -70,6 +70,7 @@ router.post("/login", passport.authenticate("local"), controller.loginUser);
  * @returns {Location[]} - A list of locations.
  */
 router.get("/locations", controller.getLocations);
+router.get("/special-locations", controller.getLocationsSpecial);
 
 /**
  * Route to get a list of providers.
@@ -236,11 +237,11 @@ router.get("/getDismantlebyBatchID/:batchid", controller.getDismantlebyBatchID);
  * @name GET /getBatchInstallations
  * @returns {InstallationData[]} - A list of batch installations.
  */
-router.get("/getBatchInstallations", controller.getBatchInstallations);
+router.get("/getBatchInstallations/:batchid", controller.getBatchInstallations);
 
-router.get("/getBatchRelocation", controller.getBatchRelocations);
+router.get("/getBatchRelocation/:batchid", controller.getBatchRelocations);
 
-router.get("/getBatchDismantle", controller.getBatchDismantle);
+router.get("/getBatchDismantle/:batchid", controller.getBatchDismantle);
 /**
  * Route to get providers by area.
  *

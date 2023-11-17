@@ -13,6 +13,11 @@ const Location = sequelize.define('locations', {
     type: Sequelize.STRING,
     allowNull: false,
     unique: true,
+  },
+  province: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    unique: true,
   }
 }, {
   timestamps: false, // Disable timestamps (createdAt and updatedAt columns)

@@ -83,7 +83,26 @@ async function loginUser(body) {
 async function getLocations() {
   try {
     // Retrieve a list of locations from the database
-    const locations = await Location.findAll();
+    const location = await Location.findAll(
+    );
+   const locations = location.filter((location) => location.location === location.province);
+
+    if (locations.length === 0) {
+      throw new Error("Error getting locations");
+    }
+
+    return { list: locations };
+  } catch (error) {
+    throw new Error("Error getting locations");
+  }
+}
+
+async function getLocationsSpecial() {
+  try {
+    // Retrieve a list of locations from the database
+    const location = await Location.findAll(
+    );
+   const locations = location.filter((location) => location.location !== location.province);
 
     if (locations.length === 0) {
       throw new Error("Error getting locations");
@@ -426,58 +445,51 @@ async function getInstallationInfo(location) {
   }
 }
 
-async function getInstallationInfoNew(location) {
- 
-  try {
-    const Providers = await Provider.findAll();
-    const filteredProvider = [];
-    for (const provider of Providers) {
-      const availableProvider = await Installation.count({
-        where : {
-          provider_id: provider.id,
-          status: ['approved', 'pending'],
-        },
-      });
-      if (availableProvider < 2550) {
-        filteredProvider.push(provider.id);
-      }
-    }
 
-    const CoverageTable = await Coverage.findAll({
-      attributes: ['avail','id_loc', 'id_prov'],
+async function getInstallationInfoNew(location) {
+  try {
+    const providers = await Provider.findAll();
+    const filteredProviders = await Promise.all(
+      providers.map(async (provider) => {
+        const count = await Installation.count({
+          where: {
+            provider_id: provider.id,
+            status: ['approved', 'pending'],
+          },
+        });
+        return count < 10 ? provider.id : null;
+      })
+    );
+
+    const filteredProviderIds = filteredProviders.filter((id) => id !== null);
+
+    const coverageTable = await Coverage.findAll({
+      attributes: ['avail', 'id_loc', 'id_prov'],
       include: [
         {
           model: Location,
           attributes: ['location'],
-          where: {
-            location : "Jawa Timur",
-          },
+          where: { location },
           required: true,
         },
         {
           model: Provider,
           attributes: ['provider'],
-          where:{
-            id: filteredProvider,
-          },
+          where: { id: filteredProviderIds },
           required: true,
         },
       ],
     });
 
-    const AvailableProviders = CoverageTable.map((provider) => provider.id_prov);
+    const availableProviders = coverageTable.map((provider) => provider.id_prov);
 
-     const lowestSla = await Sla.findAll({
-      where: {
-        id_prov: AvailableProviders,
-      },
+    const lowestSla = await Sla.findAll({
+      where: { id_prov: availableProviders },
       include: [
         {
           model: Location,
-          attributes: ['location'],
-          where: {
-           location: "Jawa Timur",
-          },
+          attributes: ['location', 'province'],
+          where: { location },
           required: true,
         },
         {
@@ -486,65 +498,76 @@ async function getInstallationInfoNew(location) {
           required: true,
         },
       ],
-      attributes: ['days', 'id_prov'],
+      attributes: ['days', 'id_prov', 'id_loc'],
       order: [['days', 'ASC']],
     });
 
     const bestSla = lowestSla[0];
-    const SameSLAS = [];
-    for (const provider of lowestSla) {
-      if (provider.days === bestSla.days) {
-        SameSLAS.push(provider.id_prov);
-      }
-    }
+    const sameSlas = lowestSla.filter((provider) => provider.days === bestSla.days);
 
     const lowestPrice = await Price.findAll({
-      attributes: ['id_price', 'price', 'id_prov','id_loc'],
+      attributes: ['id_price', 'price', 'id_prov', 'id_loc'],
       where: {
-        id_prov: SameSLAS,
+        id_prov: sameSlas.map((provider) => provider.id_prov),
+        id_loc: coverageTable[0].id_loc,
       },
       order: [['price', 'ASC']],
     });
 
     const bestPrice = lowestPrice[0];
-    const samePrice = [];
-    for (const provider of lowestPrice) {
-      if (provider.price === bestPrice.price) {
-        samePrice.push(provider.id_prov);
-      }
-    }
-   
-    let bestProvider = null;
-    let lowestCount = Infinity;
-    for (const provider of samePrice) {
-      const providerCount = await Installation.count({
+    const samePrice = lowestPrice.filter((provider) => provider.price === bestPrice.price);
+
+    const findProvince = await Location.findOne({
+      attributes: ['province'],
+      where: {
+        id: coverageTable[0].id_loc,
+      },
+    });
+
+    const province = findProvince.province;
+
+    const providerCountPromises = samePrice.map((provider) =>
+      Installation.count({
         where: {
-          provider_id: provider,
+          provider_id: provider.id_prov,
+          status: ['approved', 'pending'],
+          province,
+        },
+      })
+    );
+
+    const providerCounts = await Promise.all(providerCountPromises);
+
+    const lowestCountProvince = Math.min(...providerCounts);
+    const bestProviderProvinceIndex = providerCounts.indexOf(lowestCountProvince);
+    const bestProviderProvince = samePrice[bestProviderProvinceIndex];
+
+    const bestProviderCountPromises = samePrice.map((provider) =>
+      Installation.count({
+        where: {
+          provider_id: provider.id_prov,
           status: ['approved', 'pending'],
         },
-      });
+      })
+    );
 
-      if (providerCount < lowestCount) {
-        lowestCount = providerCount;
-        bestProvider = provider;
-        bestProviderDays = lowestSla.find(sla => sla.id_prov === provider);
-        bestProviderPrice = lowestPrice.find(sla => sla.id_prov === provider);
-      }
-    }
-  
+    const providerCountsAll = await Promise.all(bestProviderCountPromises);
 
-    
-    // Convert the combined data map to an 
+    const lowestCount = Math.min(...providerCountsAll);
+    const bestProviderIndex = providerCountsAll.indexOf(lowestCount);
+    const bestProvider = samePrice[bestProviderIndex];
+    const bestProviderDays = lowestSla.find((sla) => sla.id_prov === bestProvider.id_prov);
+    const bestProviderPrice = lowestPrice.find((sla) => sla.id_prov === bestProvider.id_prov);
+
     return {
-      filteredProvider,
       bestProviderDays,
       bestProviderPrice,
-     } ;
-
+    };
   } catch (error) {
     throw new Error(`Error performing installation: ${error.message}`);
   }
 }
+
 
 /**
  * Creates a new installation based on provided data.
@@ -555,11 +578,35 @@ async function getInstallationInfoNew(location) {
  */
 async function createInstallation(body) {
   // Destructure input data
-  const { location, address, branch_pic, area, batchid, createdAt } = body;
+  const { location, address, branch_pic, area, batchid, createdAt,communication } = body;
+  const installationInfo = await getInstallationInfoNew(area);
+  console.log(communication);
+  if(communication === 'M2M'){
+    const installation = await Installation.create({
+      createdAt: createdAt,
+      location,
+      address,
+      batchid: batchid,
+      branch_pic,
+      area,
+      area_id: installationInfo.bestProviderPrice.id_loc,
+      province: installationInfo.bestProviderDays.location.province,
+      communication: "M2M",
+      provider: "Telkomsel",
+    });
+
+
+    return {
+      message: installation
+    };
+  }
 
   // Fetch installation information based on the provided area
-  const installationInfo = await getInstallationInfoNew(area);
- 
+ if(installationInfo.bestProviderPrice === undefined){
+    return {
+      message: "No provider available",
+    }
+  }
 
   try {
     // Create a new installation record in the database
@@ -576,6 +623,7 @@ async function createInstallation(body) {
       provider_id: installationInfo.bestProviderDays.id_prov,
       price: installationInfo.bestProviderPrice.price,
       area_id: installationInfo.bestProviderPrice.id_loc,
+      province: installationInfo.bestProviderDays.location.province,
     });
 
 
@@ -1131,7 +1179,7 @@ async function getProvidersbyArea(id_loc) {
  * @returns {Array} A list of installations grouped by batch ID.
  * @throws {Error} If there are issues with retrieving installation data.
  */
-async function getBatchInstallation() {
+async function getBatchInstallation(batchid) {
   try {
     // Get a list of installations grouped by batch ID
     const getBatchList = await Installation.findAll({
@@ -1140,11 +1188,21 @@ async function getBatchInstallation() {
       group: ['batchid', 'status', 'createdAt'],
     });
 
+    const searchByBatchID = getBatchList.filter((installation) => {
+      const lowerCaseBatchId = batchid.toLowerCase();
+      
+      // Check if the batchid contains the specified batchid (case-insensitive)
+      if (installation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
+        return true;
+      }
+      return false;
+    });
+
     // Create an array to store unique batch IDs
     const uniqueBatchIds = new Set();
 
     // Filter installations to keep only the first occurrence of each batch ID
-    const filteredList = getBatchList.filter((installation) => {
+    const filteredList = searchByBatchID.filter((installation) => {
       if (!uniqueBatchIds.has(installation.batchid)) {
         uniqueBatchIds.add(installation.batchid);
         return true;
@@ -1165,10 +1223,10 @@ async function getBatchInstallation() {
  * @returns {Promise<Array>} - A list of unique batch relocations, ordered by creation date and status.
  * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
  */
-async function getBatchRelocation() {
+async function getBatchRelocation(batchid) {
   try {
     // Get a list of relocations grouped by batch ID, ordered by creation date and status
-    const batchList = await Relocation.findAll({
+    const getBatchList = await Relocation.findAll({
       order: [['createdAt', 'DESC'], ['status', 'ASC']],
       attributes: ['batchid', 'status', 'createdAt'],
       group: ['batchid', 'status', 'createdAt'],
@@ -1177,8 +1235,18 @@ async function getBatchRelocation() {
     // Create a Set to store unique batch IDs
     const uniqueBatchIds = new Set();
 
+    const searchByBatchID = getBatchList.filter((relocation) => {
+      const lowerCaseBatchId = batchid.toLowerCase();
+      
+      // Check if the batchid contains the specified batchid (case-insensitive)
+      if (relocation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
+        return true;
+      }
+      return false;
+    });
+
     // Filter relocations to keep only the first occurrence of each batch ID
-    const filteredList = batchList.filter((relocation) => {
+    const filteredList = searchByBatchID.filter((relocation) => {
       if (!uniqueBatchIds.has(relocation.batchid)) {
         uniqueBatchIds.add(relocation.batchid);
         return true;
@@ -1199,10 +1267,10 @@ async function getBatchRelocation() {
  * @returns {Promise<Array>} - A list of unique batch dismantles, ordered by creation date and status.
  * @throws {Error} - Throws an error if there's an issue retrieving the batch list.
  */
-async function getBatchDismantle() {
+async function getBatchDismantle(batchid) {
   try {
     // Get a list of dismantles grouped by batch ID, ordered by creation date and status
-    const batchList = await Dismantle.findAll({
+    const getBatchList = await Dismantle.findAll({
       order: [['createdAt', 'DESC'], ['status', 'ASC']],
       attributes: ['batchid', 'status', 'createdAt'],
       group: ['batchid', 'status', 'createdAt'],
@@ -1211,8 +1279,18 @@ async function getBatchDismantle() {
     // Create a Set to store unique batch IDs
     const uniqueBatchIds = new Set();
 
+    const searchByBatchID = getBatchList.filter((dismantle) => {
+      const lowerCaseBatchId = batchid.toLowerCase();
+      
+      // Check if the batchid contains the specified batchid (case-insensitive)
+      if (dismantle.batchid.toLowerCase().includes(lowerCaseBatchId)) {
+        return true;
+      }
+      return false;
+    });
+
     // Filter dismantles to keep only the first occurrence of each batch ID
-    const filteredList = batchList.filter((dismantle) => {
+    const filteredList = searchByBatchID.filter((dismantle) => {
       if (!uniqueBatchIds.has(dismantle.batchid)) {
         uniqueBatchIds.add(dismantle.batchid);
         return true;
@@ -1448,6 +1526,7 @@ module.exports = {
   updateInstallation,
   loginUser,
   getBatchInstallation,
+  getLocationsSpecial,
   getInstallationList,
   overrideInstallation,
   getInstallationProvider,

@@ -58,6 +58,10 @@ function getLocations(req, res) {
   handleRequestResponse(req, res, query.getLocations);
 }
 
+function getLocationsSpecial(req, res) {
+  handleRequestResponse(req, res, query.getLocationsSpecial);
+}
+
 /**
  * Retrieves a list of providers by invoking the 'getProviders' query function.
  * @param {Object} req - The request object.
@@ -158,16 +162,34 @@ async function getInstallationsById(req, res) {
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
  */
-function getBatchInstallations(req, res) {
-  handleRequestResponse(req, res, query.getBatchInstallation);
+async function getBatchInstallations(req, res) {
+  try {
+    const batchid = req.params.batchid;
+    const result = await query.getBatchInstallation(batchid);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
 }
 
-function getBatchRelocations(req, res) {
-  handleRequestResponse(req, res, query.getBatchRelocation);
+async function getBatchRelocations(req, res) {
+  try {
+    const batchid = req.params.batchid;
+    const result = await query.getBatchRelocation(batchid);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
 }
 
-function getBatchDismantle(req, res) {
-  handleRequestResponse(req, res, query.getBatchDismantle);
+async function getBatchDismantle(req, res) {
+  try {
+    const batchid = req.params.batchid;
+    const result = await query.getBatchDismantle(batchid);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
 }
 
 function getFilteredInstallation(req, res) {
@@ -373,4 +395,5 @@ module.exports = {
   getInstallationbyLocation,
   getDismantlebyBatchID,
   testing,
+  getLocationsSpecial,
 };

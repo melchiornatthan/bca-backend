@@ -48,11 +48,14 @@ const Installation = sequelize.define('installations', {
     type: Sequelize.INTEGER,
   },
   communication: {
-    type: Sequelize.ENUM('VSAT'),
+    type: Sequelize.ENUM('VSAT', 'M2M'),
     defaultValue: 'VSAT',
     allowNull: false,
   },
   area: {
+    type: Sequelize.STRING,
+  },
+  province: {
     type: Sequelize.STRING,
   },
   relocation_status: {

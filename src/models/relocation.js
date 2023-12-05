@@ -33,12 +33,12 @@ const Relocation = sequelize.define('relocations', {
     allowNull: false,
   },
   old_communication: {
-    type: Sequelize.ENUM('VSAT'),
+    type: Sequelize.ENUM('VSAT', 'M2M'),
     defaultValue: 'VSAT',
     allowNull: false,
   },
   new_communication: {
-    type: Sequelize.ENUM('VSAT'),
+    type: Sequelize.ENUM('VSAT', 'M2M'),
     defaultValue: 'VSAT',
     allowNull: false,
   },

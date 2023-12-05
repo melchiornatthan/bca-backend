@@ -85,7 +85,7 @@ async function getLocations() {
     // Retrieve a list of locations from the database
     const location = await Location.findAll(
     );
-   const locations = location.filter((location) => location.location === location.province);
+    const locations = location.filter((location) => location.location === location.province);
 
     if (locations.length === 0) {
       throw new Error("Error getting locations");
@@ -102,7 +102,7 @@ async function getLocationsSpecial() {
     // Retrieve a list of locations from the database
     const location = await Location.findAll(
     );
-   const locations = location.filter((location) => location.location !== location.province);
+    const locations = location.filter((location) => location.location !== location.province);
 
     if (locations.length === 0) {
       throw new Error("Error getting locations");
@@ -265,34 +265,43 @@ async function getProviders() {
 
 async function getRequestCount() {
   try {
-    // Retrieve a list of provider data from the database
-    const installation = await Installation.count({
+    // Retrieve unique batch IDs for each status from the database
+    const uniqueInstallationBatchIds = await Installation.findAll({
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('batchid')), 'batchid']],
       where: {
         status: ['pending'],
       },
     });
 
-    const relocation = await Relocation.count({
+    const uniqueRelocationBatchIds = await Relocation.findAll({
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('batchid')), 'batchid']],
       where: {
         status: ['pending'],
       },
     });
 
-    const dismantle = await Dismantle.count({
+    const uniqueDismantleBatchIds = await Dismantle.findAll({
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('batchid')), 'batchid']],
       where: {
         status: ['pending'],
       },
     });
+
+    // Count the number of unique batch IDs
+    const installationCount = uniqueInstallationBatchIds.length;
+    const relocationCount = uniqueRelocationBatchIds.length;
+    const dismantleCount = uniqueDismantleBatchIds.length;
 
     return {
-      installation: installation,
-      relocation: relocation,
-      dismantle: dismantle,
+      installation: installationCount,
+      relocation: relocationCount,
+      dismantle: dismantleCount,
     };
   } catch (error) {
     throw new Error("Error getting count");
   }
 }
+
 
 async function getProvidersCount() {
   try {
@@ -578,10 +587,10 @@ async function getInstallationInfoNew(location) {
  */
 async function createInstallation(body) {
   // Destructure input data
-  const { location, address, branch_pic, area, batchid, createdAt,communication } = body;
+  const { location, address, branch_pic, area, batchid, createdAt, communication } = body;
   const installationInfo = await getInstallationInfoNew(area);
   console.log(communication);
-  if(communication === 'M2M'){
+  if (communication === 'M2M') {
     const installation = await Installation.create({
       createdAt: createdAt,
       location,
@@ -602,7 +611,7 @@ async function createInstallation(body) {
   }
 
   // Fetch installation information based on the provided area
- if(installationInfo.bestProviderPrice === undefined){
+  if (installationInfo.bestProviderPrice === undefined) {
     return {
       message: "No provider available",
     }
@@ -1190,7 +1199,7 @@ async function getBatchInstallation(batchid) {
 
     const searchByBatchID = getBatchList.filter((installation) => {
       const lowerCaseBatchId = batchid.toLowerCase();
-      
+
       // Check if the batchid contains the specified batchid (case-insensitive)
       if (installation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
         return true;
@@ -1237,7 +1246,7 @@ async function getBatchRelocation(batchid) {
 
     const searchByBatchID = getBatchList.filter((relocation) => {
       const lowerCaseBatchId = batchid.toLowerCase();
-      
+
       // Check if the batchid contains the specified batchid (case-insensitive)
       if (relocation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
         return true;
@@ -1281,7 +1290,7 @@ async function getBatchDismantle(batchid) {
 
     const searchByBatchID = getBatchList.filter((dismantle) => {
       const lowerCaseBatchId = batchid.toLowerCase();
-      
+
       // Check if the batchid contains the specified batchid (case-insensitive)
       if (dismantle.batchid.toLowerCase().includes(lowerCaseBatchId)) {
         return true;
@@ -1379,6 +1388,7 @@ async function getDismantlebyBatchId(batchid) {
 async function overrideInstallation(body) {
   const { id, id_prov, location } = body;
   try {
+    if(id_prov !== "5"){
     const newProvider = await getInstallationProvider(location, id_prov);
     // Update the installation with new information and set its status to "approved" if it's currently "pending"
     const results = await Installation.update(
@@ -1398,9 +1408,36 @@ async function overrideInstallation(body) {
       }
     );
 
-
-
     return results;
+    
+    } else {
+      const newProvider = await Provider.findAll(
+        {
+          where: {
+            id: id_prov,
+          },
+        }
+      );
+
+      const results = await Installation.update(
+        {
+          provider: newProvider[0].dataValues.provider,
+          provider_id: id_prov,
+          status: "approved",
+          days: null,
+          price_id: null,
+          price: null,
+          communication: "M2M",
+        },
+        {
+          where: {
+            id: id,
+            status: "pending",
+          },
+        }
+      );
+      return results;
+    }
   } catch (error) {
     console.error('Error updating installation list:', error);
     throw new Error('Error updating installation list');
@@ -1417,8 +1454,6 @@ async function overrideInstallation(body) {
  */
 async function getInstallationProvider(location, id_prov) {
   try {
-    console.log(id_prov);
-
     // Query for Coverage Providers
     const coverageProviders = await Coverage.findAll({
       include: [

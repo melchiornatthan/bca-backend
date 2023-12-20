@@ -15,6 +15,16 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
+// Sync the database and start the server
+sequelize
+  .sync()
+  .then(() => {
+    console.log('Database synchronized.');
+  })
+  .catch((error) => {
+    console.error('Error synchronizing database:', error);
+  });
+
 const port = process.env.PORT || 3333;
 const app = express();
 
@@ -55,16 +65,7 @@ app.get("/", (req, res) => {
   }
 });
 
-// Sync the database and start the server
-sequelize
-  .sync()
-  .then(() => {
-    console.log('Database synchronized.');
-    // Your application logic here
-  })
-  .catch((error) => {
-    console.error('Error synchronizing database:', error);
-  });
+
 
 // Define routes
 app.use("/bca-app", todoRoutes);

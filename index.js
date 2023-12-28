@@ -8,6 +8,7 @@ const local = require("./src/middlewares/local");
 const sequelize = require("./src/database/connection");
 const store = new session.MemoryStore();
 const todoRoutes = require("./src/router/router");
+const cookieParser = require('cookie-parser');
 
 const corsOptions = {
   origin: "*", // Replace with the actual allowed origins
@@ -27,6 +28,8 @@ sequelize
 
 const port = process.env.PORT || 3333;
 const app = express();
+
+app.use(cookieParser());
 
 // Configure session management
 app.use(

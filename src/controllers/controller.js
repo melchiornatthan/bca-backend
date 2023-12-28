@@ -49,6 +49,20 @@ function loginUser(req, res) {
   handleRequestResponse(req, res, query.loginUser);
 }
 
+async function loginUser(req, res) {
+  try {
+    const result = await query.loginUser(req.body);
+    res.cookie("authToken", result.token, {
+      maxAge: 3600000,
+      sameSite: "None",
+    }); // 1 hour expiration
+
+    res.send({ message: "User Login Successfully" });
+  } catch (error) {
+    res.json(error);
+  }
+}
+
 /**
  * Retrieves a list of locations by invoking the 'getLocations' query function.
  * @param {Object} req - The request object.
@@ -104,7 +118,9 @@ function getPriceData(req, res) {
  * @param {Object} res - The response object.
  */
 function getInstallationInfo(req, res) {
-  handleRequestResponse(req, res, (body) => query.getInstallationInfo(body.location));
+  handleRequestResponse(req, res, (body) =>
+    query.getInstallationInfo(body.location)
+  );
 }
 
 /**
@@ -343,9 +359,6 @@ async function getRelocationsById(req, res) {
     res.json(error);
   }
 }
-
-
-
 
 async function getLocationByArea(req, res) {
   try {

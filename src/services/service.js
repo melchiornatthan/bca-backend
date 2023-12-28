@@ -70,12 +70,10 @@ async function loginUser(body) {
     const payload = {
       userId: user.dataValues.id, // You can customize the payload based on your user object
       username: user.dataValues.username,
-      // Add any other relevant information about the user
     };
     const token = jwt.sign(payload, 'BCA', { expiresIn: '1h' });
 
     return {
-      message: "User logged in successfully",
       token: token,
     };
   } catch (error) {

@@ -16,6 +16,10 @@ const User = sequelize.define('users', {
   password: {
     type: Sequelize.STRING,
     allowNull: false,
+  },
+  isAdmin: {
+    type: Sequelize.BOOLEAN,
+    allowNull: false,
   }
 }, {
   timestamps: false, // Disable timestamps (createdAt and updatedAt columns)

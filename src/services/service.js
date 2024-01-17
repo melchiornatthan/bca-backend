@@ -9,10 +9,8 @@ const Installation = require("../models/installations");
 const Relocation = require("../models/relocation");
 const Dismantle = require("../models/dismantle");
 const { Op } = require("sequelize");
-const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const sequelize = require("sequelize");
-const e = require("express");
 
 /**
  * Registers a new user.
@@ -22,18 +20,18 @@ const e = require("express");
  * @throws {Error} If there are issues with user registration.
  */
 async function registerUser(body) {
-  const { username, password } = body;
+  const { username, password, isAdmin } = body;
 
   try {
     // Hash the user's password before storing it
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new user in the database
-    const newUser = await User.create({ username, password: hashedPassword });
-
-    if (!newUser) {
-      throw new Error("Error registering user");
-    }
+    const newUser = await User.create({
+      username,
+      password: hashedPassword,
+      isAdmin,
+    });
 
     return {
       message: "User created successfully",
@@ -63,18 +61,21 @@ async function loginUser(body) {
 
     // Check if the provided password matches the hashed password in the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       throw new Error("Invalid password");
     }
     const payload = {
       userId: user.dataValues.id, // You can customize the payload based on your user object
       username: user.dataValues.username,
+      isAdmin: user.dataValues.isAdmin,
+      // Add any other relevant information about the user
     };
-    const token = jwt.sign(payload, 'BCA', { expiresIn: '1h' });
+    const token = jwt.sign(payload, "BCA", { expiresIn: "1h" });
 
     return {
+      message: "User logged in successfully",
       token: token,
+      isAdmin: user.dataValues.isAdmin,
     };
   } catch (error) {
     throw new Error("Error logging in");
@@ -632,7 +633,6 @@ async function createInstallation(body) {
     communication,
   } = body;
   const installationInfo = await getInstallationInfoNew(area);
-  console.log(communication);
   if (communication === "M2M") {
     const installation = await Installation.create({
       createdAt: createdAt,
@@ -712,7 +712,6 @@ async function createRelocation(body) {
     batchid,
     createdAt,
   } = body;
-  console.log(old_location);
   try {
     const findInstallation = await Installation.findOne({
       where: {
@@ -836,11 +835,16 @@ async function getInstallationList() {
         "area",
         "relocation_status",
         "dismantle_status",
+        "createdAt",
       ],
       order: [
         ["status", "ASC"],
         ["createdAt", "DESC"],
       ],
+      where: {
+        dismantle_status: false,
+        relocation_status: false,
+      },
     });
     return installations;
   } catch (error) {
@@ -892,8 +896,6 @@ async function getInstallationFiltered() {
         installationsWithSameBatchId.push(batchIdToSearch);
       }
     });
-
-    console.log(installationsWithSameBatchId);
 
     // Fetch unique approved installations that do not have a pending counterpart
     const installationsWithUniqueBatchId = await Installation.findAll({

@@ -2,7 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const controller = require("../controllers/controller");
-const authMiddleware = require("../middlewares/local");
+const authMiddleware = require("../middlewares/tokenAuth");
 
 /**
  * @typedef {Object} Location
@@ -70,8 +70,12 @@ router.post("/login", controller.loginUser);
  * @name GET /locations
  * @returns {Location[]} - A list of locations.
  */
-router.get("/locations",authMiddleware,  controller.getLocations);
-router.get("/special-locations", authMiddleware, controller.getLocationsSpecial);
+router.get("/locations", authMiddleware, controller.getLocations);
+router.get(
+  "/special-locations",
+  authMiddleware,
+  controller.getLocationsSpecial
+);
 
 /**
  * Route to get a list of providers.
@@ -81,7 +85,11 @@ router.get("/special-locations", authMiddleware, controller.getLocationsSpecial)
  */
 router.get("/providers", authMiddleware, controller.getProviders);
 
-router.get("/locationByArea/:location", authMiddleware, controller.getLocationByArea);
+router.get(
+  "/locationByArea/:location",
+  authMiddleware,
+  controller.getLocationByArea
+);
 
 /**
  * Route to get installation information.
@@ -92,17 +100,21 @@ router.get("/locationByArea/:location", authMiddleware, controller.getLocationBy
  */
 router.post("/installation", authMiddleware, controller.getInstallationInfo);
 
-router.get("/filtered-installation",authMiddleware, controller.getFilteredInstallation);
+router.get(
+  "/filtered-installation",
+  authMiddleware,
+  controller.getFilteredInstallation
+);
 
 router.get("/providerCount", authMiddleware, controller.getProviderCount);
-router.get("/requestsCount",authMiddleware,  controller.getRequestCount);
+router.get("/requestsCount", authMiddleware, controller.getRequestCount);
 /**
  * Route to get a list of SLA data.
  *
  * @name GET /sla
  * @returns {SLAData[]} - A list of SLA data.
  */
-router.get("/sla",authMiddleware,  controller.getSLAData);
+router.get("/sla", authMiddleware, controller.getSLAData);
 
 /**
  * Route to get a list of coverage data.
@@ -110,7 +122,7 @@ router.get("/sla",authMiddleware,  controller.getSLAData);
  * @name GET /coverage
  * @returns {CoverageData[]} - A list of coverage data.
  */
-router.get("/coverage",authMiddleware,  controller.getCoverageData);
+router.get("/coverage", authMiddleware, controller.getCoverageData);
 
 /**
  * Route to get a list of price data.
@@ -118,15 +130,18 @@ router.get("/coverage",authMiddleware,  controller.getCoverageData);
  * @name GET /prices
  * @returns {PriceData[]} - A list of price data.
  */
-router.get("/prices",authMiddleware,  controller.getPriceData);
+router.get("/prices", authMiddleware, controller.getPriceData);
 
 router.get("/relocations", authMiddleware, controller.getRelocations);
 router.get("/dismantles", authMiddleware, controller.getDismantles);
 
 router.get("/relocations/:id", authMiddleware, controller.getRelocationsById);
 
-
-router.get("/installationByLocation/:location",authMiddleware,  controller.getInstallationbyLocation);
+router.get(
+  "/installationByLocation/:location",
+  authMiddleware,
+  controller.getInstallationbyLocation
+);
 
 /**
  * Route to submit an installation request.
@@ -134,7 +149,11 @@ router.get("/installationByLocation/:location",authMiddleware,  controller.getIn
  * @name POST /installation-request
  * @param {InstallationRequest} request.body - The installation request object.
  */
-router.post("/installation-request", authMiddleware, controller.installationRequest);
+router.post(
+  "/installation-request",
+  authMiddleware,
+  controller.installationRequest
+);
 
 /**
  * Route to submit a relocation request.
@@ -142,7 +161,11 @@ router.post("/installation-request", authMiddleware, controller.installationRequ
  * @name POST /relocation-request
  * @param {InstallationRequest} request.body - The relocation request object.
  */
-router.post("/relocation-request", authMiddleware, controller.relocationRequest);
+router.post(
+  "/relocation-request",
+  authMiddleware,
+  controller.relocationRequest
+);
 
 router.post("/testing", controller.testing);
 
@@ -169,7 +192,11 @@ router.get("/installations", authMiddleware, controller.getInstallations);
  * @param {string} id - The installation ID.
  * @returns {InstallationData} - Installation data.
  */
-router.get("/installationsById/:id",authMiddleware,  controller.getInstallationsById);
+router.get(
+  "/installationsById/:id",
+  authMiddleware,
+  controller.getInstallationsById
+);
 
 /**
  * Route to get installations providers.
@@ -179,7 +206,11 @@ router.get("/installationsById/:id",authMiddleware,  controller.getInstallations
  * @param {string} id_prov - The provider ID.
  * @returns {InstallationData} - Installation data.
  */
-router.get("/installations-providers/:location/:id_prov", authMiddleware, controller.getInstallationsProviders);
+router.get(
+  "/installations-providers/:location/:id_prov",
+  authMiddleware,
+  controller.getInstallationsProviders
+);
 
 /**
  * Route to update installations data by ID.
@@ -188,7 +219,11 @@ router.get("/installations-providers/:location/:id_prov", authMiddleware, contro
  * @param {string} id - The installation ID to update.
  * @returns {InstallationData} - Updated installation data.
  */
-router.put("/update-installations/:id", authMiddleware, controller.updateInstallations);
+router.put(
+  "/update-installations/:id",
+  authMiddleware,
+  controller.updateInstallations
+);
 
 /**
  * Route to update relocation records.
@@ -211,7 +246,11 @@ router.put("/update-dismantle", authMiddleware, controller.updateDismantle);
  *
  * @name POST /installation-override
  */
-router.post("/installation-override", authMiddleware, controller.overrideInstallations);
+router.post(
+  "/installation-override",
+  authMiddleware,
+  controller.overrideInstallations
+);
 
 /**
  * Route to get a batch ID.
@@ -219,9 +258,21 @@ router.post("/installation-override", authMiddleware, controller.overrideInstall
  * @name GET /getBatchId
  * @returns {string} - The batch ID.
  */
-router.get("/getInstallationBatchId",authMiddleware,  controller.getInstallationBatchId);
-router.get("/getRelocationBatchId",authMiddleware,  controller.getRelocationBatchId);
-router.get("/getDismantleBatchId",authMiddleware,  controller.getDismantleBatchId);
+router.get(
+  "/getInstallationBatchId",
+  authMiddleware,
+  controller.getInstallationBatchId
+);
+router.get(
+  "/getRelocationBatchId",
+  authMiddleware,
+  controller.getRelocationBatchId
+);
+router.get(
+  "/getDismantleBatchId",
+  authMiddleware,
+  controller.getDismantleBatchId
+);
 /**
  * Route to get installations by batch ID.
  *
@@ -229,20 +280,44 @@ router.get("/getDismantleBatchId",authMiddleware,  controller.getDismantleBatchI
  * @param {string} batchid - The batch ID.
  * @returns {InstallationData[]} - A list of installations by batch ID.
  */
-router.get("/getInstallationsbyBatchID/:batchid",authMiddleware,  controller.getInstallationsbyBatchID);
-router.get("/getRelocationsbyBatchID/:batchid",authMiddleware,  controller.getRelocationbyBatchId);
-router.get("/getDismantlebyBatchID/:batchid", authMiddleware, controller.getDismantlebyBatchID);
+router.get(
+  "/getInstallationsbyBatchID/:batchid",
+  authMiddleware,
+  controller.getInstallationsbyBatchID
+);
+router.get(
+  "/getRelocationsbyBatchID/:batchid",
+  authMiddleware,
+  controller.getRelocationbyBatchId
+);
+router.get(
+  "/getDismantlebyBatchID/:batchid",
+  authMiddleware,
+  controller.getDismantlebyBatchID
+);
 /**
  * Route to get batch installations.
  *
  * @name GET /getBatchInstallations
  * @returns {InstallationData[]} - A list of batch installations.
  */
-router.get("/getBatchInstallations/:batchid",authMiddleware,  controller.getBatchInstallations);
+router.get(
+  "/getBatchInstallations/:batchid",
+  authMiddleware,
+  controller.getBatchInstallations
+);
 
-router.get("/getBatchRelocation/:batchid",authMiddleware,  controller.getBatchRelocations);
+router.get(
+  "/getBatchRelocation/:batchid",
+  authMiddleware,
+  controller.getBatchRelocations
+);
 
-router.get("/getBatchDismantle/:batchid", authMiddleware, controller.getBatchDismantle);
+router.get(
+  "/getBatchDismantle/:batchid",
+  authMiddleware,
+  controller.getBatchDismantle
+);
 /**
  * Route to get providers by area.
  *
@@ -250,6 +325,10 @@ router.get("/getBatchDismantle/:batchid", authMiddleware, controller.getBatchDis
  * @param {string} id_loc - The location ID.
  * @returns {Provider[]} - A list of providers in the specified area.
  */
-router.get("/getProvidersbyArea/:id_loc", authMiddleware, controller.getProvidersbyArea);
+router.get(
+  "/getProvidersbyArea/:id_loc",
+  authMiddleware,
+  controller.getProvidersbyArea
+);
 
 module.exports = router;

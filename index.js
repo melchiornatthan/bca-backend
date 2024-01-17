@@ -4,11 +4,10 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const cors = require("cors");
 const passport = require("passport");
-const local = require("./src/middlewares/local");
+const local = require("./src/middlewares/tokenAuth");
 const sequelize = require("./src/database/connection");
 const store = new session.MemoryStore();
 const todoRoutes = require("./src/router/router");
-const cookieParser = require('cookie-parser');
 
 const corsOptions = {
   origin: "*", // Replace with the actual allowed origins
@@ -20,7 +19,7 @@ const corsOptions = {
 sequelize
   .sync()
   .then(() => {
-    console.log('Database synchronized.');
+    console.log('Database and Tables Synchronized.');
   })
   .catch((error) => {
     console.error('Error synchronizing database:', error);
@@ -28,8 +27,6 @@ sequelize
 
 const port = process.env.PORT || 3333;
 const app = express();
-
-app.use(cookieParser());
 
 // Configure session management
 app.use(

@@ -49,19 +49,7 @@ function loginUser(req, res) {
   handleRequestResponse(req, res, query.loginUser);
 }
 
-async function loginUser(req, res) {
-  try {
-    const result = await query.loginUser(req.body);
-    res.cookie("authToken", result.token, {
-      maxAge: 3600000,
-      sameSite: "None",
-    }); // 1 hour expiration
 
-    res.send({ message: "User Login Successfully" });
-  } catch (error) {
-    res.json(error);
-  }
-}
 
 /**
  * Retrieves a list of locations by invoking the 'getLocations' query function.

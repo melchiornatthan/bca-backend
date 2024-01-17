@@ -352,6 +352,7 @@ async function getLocationByArea(req, res) {
   try {
     const location = req.params.location;
     const result = await query.getLocationByName(location);
+    console.log(result);
     res.json(result);
   } catch (error) {
     res.json(error);

@@ -972,16 +972,18 @@ async function getInstallationById(id) {
 async function getLocationByName(location) {
   try {
     // Fetch location records matching the provided name and criteria
-    const locationIds = await Location.findAll({
-      attributes: ["id"],
+    const Installations = await Installation.findAll({
+      attributes: ["id", "location"],
       where: {
-        location: location,
+        location: {
+          [Op.iLike]: `%${location}%`, // Using Op.iLike for case-insensitive matching
+        },
         status: "approved",
         dismantle_status: false,
         relocation_status: false,
       },
     });
-    return locationIds;
+    return Installations;
   } catch (error) {
     console.error("Error fetching location list:", error);
     throw new Error("Error fetching location list");

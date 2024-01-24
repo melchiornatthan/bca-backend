@@ -71,6 +71,14 @@ const Relocation = sequelize.define('relocations', {
     type: Sequelize.BIGINT,
     allowNull: false,
   },
+  provider: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  provider_id: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+  },
 });
 
 module.exports = Relocation;

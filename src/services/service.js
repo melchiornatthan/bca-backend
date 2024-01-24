@@ -718,6 +718,7 @@ async function createRelocation(body) {
         id: installation_id,
       },
     });
+
     if (!findInstallation) {
       return {
         message: "Installation not found",
@@ -740,6 +741,8 @@ async function createRelocation(body) {
         old_address,
         new_address,
         installation_id,
+        provider: findInstallation.dataValues.provider,
+        provider_id: findInstallation.dataValues.provider_id,
       });
 
       const updateInstallation = await Installation.update(
@@ -775,7 +778,7 @@ async function createDismantle(body) {
   const { installation_id, createdAt, batchid } = body;
   try {
     const getLocation = await Installation.findOne({
-      attributes: ["location"],
+      attributes: ["location", "provider", "provider_id"],
       where: {
         id: installation_id,
       },
@@ -793,6 +796,8 @@ async function createDismantle(body) {
         location: getLocation.location,
         createdAt,
         batchid,
+        provider: getLocation.dataValues.provider,
+        provider_id: getLocation.dataValues.provider_id,
       });
       const updateInstallation = await Installation.update(
         {
@@ -1474,12 +1479,14 @@ async function getRelocationbyBatchId(batchid) {
     const relocationList = await Relocation.findAll({
       where: { batchid: batchid },
     });
+
     return relocationList;
   } catch (error) {
-    console.error("Error getting relocation list", error);
-    throw new Error("Error getting relocation list");
+    console.error("Error getting installation IDs", error);
+    throw new Error("Error getting installation IDs");
   }
 }
+
 
 /**
  * Retrieves a list of dismantles for the specified batch ID.

@@ -26,6 +26,14 @@ const Dismantle = sequelize.define('dismantles', {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  provider: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  provider_id: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+  },
 });
 
 Dismantle.belongsTo(Installation, { foreignKey: 'installation_id' });

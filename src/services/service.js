@@ -1312,21 +1312,13 @@ async function getBatchInstallation(batchid) {
       group: ["batchid", "status", "createdAt"],
     });
 
-    const searchByBatchID = getBatchList.filter((installation) => {
-      const lowerCaseBatchId = batchid.toLowerCase();
-
-      // Check if the batchid contains the specified batchid (case-insensitive)
-      if (installation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
-        return true;
-      }
-      return false;
-    });
+    
 
     // Create an array to store unique batch IDs
     const uniqueBatchIds = new Set();
 
     // Filter installations to keep only the first occurrence of each batch ID
-    const filteredList = searchByBatchID.filter((installation) => {
+    const filteredList = getBatchList.filter((installation) => {
       if (!uniqueBatchIds.has(installation.batchid)) {
         uniqueBatchIds.add(installation.batchid);
         return true;
@@ -1362,18 +1354,10 @@ async function getBatchRelocation(batchid) {
     // Create a Set to store unique batch IDs
     const uniqueBatchIds = new Set();
 
-    const searchByBatchID = getBatchList.filter((relocation) => {
-      const lowerCaseBatchId = batchid.toLowerCase();
-
-      // Check if the batchid contains the specified batchid (case-insensitive)
-      if (relocation.batchid.toLowerCase().includes(lowerCaseBatchId)) {
-        return true;
-      }
-      return false;
-    });
+    
 
     // Filter relocations to keep only the first occurrence of each batch ID
-    const filteredList = searchByBatchID.filter((relocation) => {
+    const filteredList = getBatchList.filter((relocation) => {
       if (!uniqueBatchIds.has(relocation.batchid)) {
         uniqueBatchIds.add(relocation.batchid);
         return true;
@@ -1409,18 +1393,10 @@ async function getBatchDismantle(batchid) {
     // Create a Set to store unique batch IDs
     const uniqueBatchIds = new Set();
 
-    const searchByBatchID = getBatchList.filter((dismantle) => {
-      const lowerCaseBatchId = batchid.toLowerCase();
-
-      // Check if the batchid contains the specified batchid (case-insensitive)
-      if (dismantle.batchid.toLowerCase().includes(lowerCaseBatchId)) {
-        return true;
-      }
-      return false;
-    });
+    
 
     // Filter dismantles to keep only the first occurrence of each batch ID
-    const filteredList = searchByBatchID.filter((dismantle) => {
+    const filteredList = getBatchList.filter((dismantle) => {
       if (!uniqueBatchIds.has(dismantle.batchid)) {
         uniqueBatchIds.add(dismantle.batchid);
         return true;

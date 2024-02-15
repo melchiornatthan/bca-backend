@@ -1,5 +1,6 @@
 const sequelize = require('../database/connection');
 const Sequelize = require('sequelize');
+const Installation = require('./installations');
 
 // Define the Installation model for the "installations" table
 const Relocation = sequelize.define('relocations', {
@@ -80,5 +81,7 @@ const Relocation = sequelize.define('relocations', {
     allowNull: false,
   },
 });
+
+Relocation.belongsTo(Installation, { foreignKey: 'installation_id' });
 
 module.exports = Relocation;

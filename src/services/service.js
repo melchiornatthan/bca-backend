@@ -645,6 +645,7 @@ async function createInstallation(body) {
       province: installationInfo.bestProviderDays.location.province,
       communication: "M2M",
       provider: "Telkomsel",
+      provider_id: 5,
     });
 
     return {
@@ -1212,12 +1213,19 @@ async function getInstallationBatchId() {
       attributes: ["batchid"],
       limit: 1,
     });
+
+    // If getBatchId is null, return 2000000
+    if (!getBatchId) {
+      return {batchid : 2000000};
+    }
+
     return getBatchId;
   } catch (error) {
     console.error("Error getting batch ID", error);
     throw new Error("Error getting batch ID");
   }
 }
+
 
 /**
  * Retrieves the batch ID of the latest dismantle.
@@ -1233,6 +1241,12 @@ async function getDismantleBatchId() {
       attributes: ["batchid"],
       limit: 1,
     });
+
+
+    if (!latestDismantle) {
+      return {batchid : 2000000};
+    }
+
     return latestDismantle;
   } catch (error) {
     console.error("Error getting dismantle batch ID", error);
@@ -1254,6 +1268,11 @@ async function getRelocationBatchId() {
       attributes: ["batchid"],
       limit: 1,
     });
+
+    if (!latestRelocation) {
+      return {batchid : 2000000};
+    }
+
     return latestRelocation;
   } catch (error) {
     console.error("Error getting relocation batch ID", error);

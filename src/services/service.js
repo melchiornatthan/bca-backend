@@ -1216,7 +1216,7 @@ async function getInstallationBatchId() {
 
     // If getBatchId is null, return 2000000
     if (!getBatchId) {
-      return {batchid : 2000000};
+      return {batchid : 20000000};
     }
 
     return getBatchId;
@@ -1244,7 +1244,7 @@ async function getDismantleBatchId() {
 
 
     if (!latestDismantle) {
-      return {batchid : 2000000};
+      return {batchid : 20000000};
     }
 
     return latestDismantle;
@@ -1270,7 +1270,7 @@ async function getRelocationBatchId() {
     });
 
     if (!latestRelocation) {
-      return {batchid : 2000000};
+      return {batchid : 20000000};
     }
 
     return latestRelocation;

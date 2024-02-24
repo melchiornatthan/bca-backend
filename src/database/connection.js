@@ -4,7 +4,6 @@ const Sequelize = require('sequelize');
 const sequelize = new Sequelize('bca', 'melchiornatthan', '', {
   host: 'localhost', // Change this to your database host
   dialect: 'postgres', // Use 'mysql' for MySQL, 'sqlite' for SQLite, etc.
-  logging: false, // Set to console.log to see the raw SQL queries
 });
 
 // Export the Sequelize instance for use in other parts of your application

@@ -31,6 +31,7 @@ router.post("/testing", controller.testing);
 router.post("/dismantle-request", controller.dismantleRequest);
 router.get("/installations", controller.getInstallations);
 router.get("/installationsById/:id", controller.getInstallationsById);
+router.get("/atmById/:id", controller.getAtmById);
 router.get("/installations-providers/:location/:id_prov", controller.getInstallationsProviders);
 router.put("/update-installations/:id", controller.updateInstallations);
 router.put("/update-relocations", controller.updateRelocations);

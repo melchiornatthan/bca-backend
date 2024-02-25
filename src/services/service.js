@@ -11,6 +11,7 @@ const Dismantle = require("../models/dismantle");
 const { Op } = require("sequelize");
 const jwt = require("jsonwebtoken");
 const sequelize = require("sequelize");
+const Atm = require("../models/atm");
 
 /**
  * Registers a new user.
@@ -648,6 +649,8 @@ async function createInstallation(body) {
       provider_id: 5,
     });
 
+   
+
     return {
       message: installation,
     };
@@ -714,7 +717,7 @@ async function createRelocation(body) {
     createdAt,
   } = body;
   try {
-    const findInstallation = await Installation.findOne({
+    const findInstallation = await Atm.findOne({
       where: {
         id: installation_id,
       },
@@ -746,7 +749,7 @@ async function createRelocation(body) {
         provider_id: findInstallation.dataValues.provider_id,
       });
 
-      const updateInstallation = await Installation.update(
+      const updateInstallation = await Atm.update(
         {
           relocation_status: true,
         },
@@ -756,10 +759,11 @@ async function createRelocation(body) {
           },
         }
       );
-
+        if(updateInstallation && relocation){
       return {
         message: "Relocation created successfully",
       };
+    }
     }
   } catch (error) {
     console.error("Error creating Relocation:", error);
@@ -778,7 +782,7 @@ async function createDismantle(body) {
   // Destructure input data
   const { installation_id, createdAt, batchid } = body;
   try {
-    const getLocation = await Installation.findOne({
+    const getLocation = await Atm.findOne({
       attributes: ["location", "provider", "provider_id"],
       where: {
         id: installation_id,
@@ -789,7 +793,6 @@ async function createDismantle(body) {
       return {
         message: "Installation not found",
       };
-      throw new Error("Installation not found");
     } else {
       // Create a new dismantle record in the database
       const dismantle = await Dismantle.create({
@@ -800,7 +803,7 @@ async function createDismantle(body) {
         provider: getLocation.dataValues.provider,
         provider_id: getLocation.dataValues.provider_id,
       });
-      const updateInstallation = await Installation.update(
+      const updateInstallation = await Atm.update(
         {
           dismantle_status: true,
         },
@@ -939,7 +942,8 @@ async function getInstallationFiltered() {
  * @throws {Error} If there are issues with retrieving installation data.
  */
 async function getInstallationById(id) {
-  try {
+  try { 
+   
     // Fetch all installation records matching the provided ID
     const installation = await Installation.findAll({
       attributes: [
@@ -961,12 +965,33 @@ async function getInstallationById(id) {
       },
       limit: 1,
     });
+
+   
     return installation;
   } catch (error) {
     console.error("Error fetching installation list:", error);
     throw new Error("Error fetching installation list");
   }
 }
+
+async function getAtmById(id) {
+  try { 
+    // Fetch all installation records matching the provided ID
+    const installation = await Atm.findAll({
+      where: {
+        id: id,
+      },
+      limit: 1,
+    });
+
+   
+    return installation;
+  } catch (error) {
+    console.error("Error fetching installation list:", error);
+    throw new Error("Error fetching installation list");
+  }
+}
+
 
 /**
  * Retrieves the location ID for the given location name, considering specific criteria.
@@ -978,18 +1003,19 @@ async function getInstallationById(id) {
 async function getLocationByName(location) {
   try {
     // Fetch location records matching the provided name and criteria
-    const Installations = await Installation.findAll({
+    const Installation = await Atm.findAll({
       attributes: ["id", "location"],
       where: {
         location: {
           [Op.iLike]: `%${location}%`, // Using Op.iLike for case-insensitive matching
         },
-        status: "approved",
+        status: "active",
         dismantle_status: false,
         relocation_status: false,
       },
     });
-    return Installations;
+
+    return Installation;
   } catch (error) {
     console.error("Error fetching location list:", error);
     throw new Error("Error fetching location list");
@@ -1091,7 +1117,25 @@ async function updateInstallation(id) {
       }
     );
     if (updateInstallation[0] === 1) {
+      const findInstallation = await Installation.findOne({
+        where: {
+          id,
+        },
+      });
+      const createAtm = await Atm.create({
+        createdAt: findInstallation.dataValues.createdAt,
+        location : findInstallation.dataValues.location,
+        address : findInstallation.dataValues.address,
+        branch_pic : findInstallation.dataValues.branch_pic,
+        area : findInstallation.dataValues.area,
+        provider: findInstallation.dataValues.provider,
+        provider_id: findInstallation.dataValues.provider_id,
+        area_id: findInstallation.dataValues.area_id,
+        province: findInstallation.dataValues.province,
+      });
+      if(createAtm){
       return updateInstallation;
+      }
     }
   } catch (error) {
     console.error("Error updating installation list:", error);
@@ -1132,7 +1176,7 @@ async function updateRelocation(body) {
     );
     if (updateRelocation[0] === 1) {
       // Update the corresponding installation information with the new location and address
-      const updateInstallation = await Installation.update(
+      const updateInstallation = await Atm.update(
         {
           location: new_location,
           address: new_address,
@@ -1180,7 +1224,7 @@ async function updateDismantle(body) {
     );
     if (updateDismantle[0] === 1) {
       // Delete the corresponding installation record
-      const updateInstallation = await Installation.update(
+      const updateInstallation = await Atm.update(
         {
           status: "dismantled",
           dismantle_status: false,
@@ -1558,7 +1602,25 @@ async function overrideInstallation(body) {
         }
       );
 
+      const findInstallation = await Installation.findOne({
+        where: {
+          id,
+        },
+      });
+      const createAtm = await Atm.create({
+        createdAt: findInstallation.dataValues.createdAt,
+        location : findInstallation.dataValues.location,
+        address : findInstallation.dataValues.address,
+        branch_pic : findInstallation.dataValues.branch_pic,
+        area : findInstallation.dataValues.area,
+        provider: findInstallation.dataValues.provider,
+        provider_id: findInstallation.dataValues.provider_id,
+        area_id: findInstallation.dataValues.area_id,
+        province: findInstallation.dataValues.province,
+      });
+      if(createAtm){
       return results;
+      }
     } else {
       const newProvider = await Provider.findAll({
         where: {
@@ -1583,6 +1645,23 @@ async function overrideInstallation(body) {
           },
         }
       );
+
+      const findInstallation = await Installation.findOne({
+        where: {
+          id,
+        },
+      });
+      const createAtm = await Atm.create({
+        createdAt: findInstallation.dataValues.createdAt,
+        location : findInstallation.dataValues.location,
+        address : findInstallation.dataValues.address,
+        branch_pic : findInstallation.dataValues.branch_pic,
+        area : findInstallation.dataValues.area,
+        provider: findInstallation.dataValues.provider,
+        provider_id: findInstallation.dataValues.provider_id,
+        area_id: findInstallation.dataValues.area_id,
+        province: findInstallation.dataValues.province,
+      });
       return results;
     }
   } catch (error) {
@@ -1742,4 +1821,5 @@ module.exports = {
   getInstallationFiltered,
   getDismantlebyBatchId,
   getInstallationInfoNew,
+  getAtmById,
 };

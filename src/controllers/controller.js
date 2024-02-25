@@ -161,6 +161,16 @@ async function getInstallationsById(req, res) {
   }
 }
 
+async function getAtmById(req, res) {
+  try {
+    const id = req.params.id;
+    const result = await query.getAtmById(id);
+    res.json(result);
+  } catch (error) {
+    res.json(error);
+  }
+}
+
 /**
  * Retrieves a list of installations grouped by batch ID by invoking the 'getBatchInstallation' query function.
  * @param {Object} req - The request object.
@@ -397,4 +407,5 @@ module.exports = {
   getDismantlebyBatchID,
   testing,
   getLocationsSpecial,
+  getAtmById,
 };

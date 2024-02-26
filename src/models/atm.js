@@ -2,7 +2,7 @@ const sequelize = require('../database/connection');
 const Sequelize = require('sequelize');
 
 // Define the Installation model for the "installations" table
-const Installation = sequelize.define('installations', {
+const Atm = sequelize.define('atm', {
   id: {
     type: Sequelize.INTEGER,
     primaryKey: true,
@@ -16,32 +16,19 @@ const Installation = sequelize.define('installations', {
     type: Sequelize.STRING,
     allowNull: false,
   },
-  batchid: {
-    type: Sequelize.BIGINT,
-    allowNull: false,
-  },
   branch_pic: {
     type: Sequelize.STRING,
     allowNull: false,
   },
-  days: {
-    type: Sequelize.INTEGER,
-  },
   status: {
-    type: Sequelize.ENUM('pending', 'approved'),
-    defaultValue: 'pending',
+    type: Sequelize.ENUM( 'pending', 'active', 'dismantled'),
+    defaultValue: 'active',
     allowNull: false,
   },
   provider: {
     type: Sequelize.STRING,
   },
   provider_id: {
-    type: Sequelize.INTEGER,
-  },
-  price: {
-    type: Sequelize.INTEGER,
-  },
-  price_id: {
     type: Sequelize.INTEGER,
   },
   area_id: {
@@ -70,4 +57,4 @@ const Installation = sequelize.define('installations', {
   },
 });
 
-module.exports = Installation;
+module.exports = Atm;

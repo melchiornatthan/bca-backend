@@ -1,6 +1,7 @@
 const sequelize = require('../database/connection');
 const Sequelize = require('sequelize');
 const Installation = require('./installations');
+const Atm = require('./atm');
 
 // Define the Installation model for the "installations" table
 const Dismantle = sequelize.define('dismantles', {
@@ -36,6 +37,6 @@ const Dismantle = sequelize.define('dismantles', {
   },
 });
 
-Dismantle.belongsTo(Installation, { foreignKey: 'installation_id' });
+Dismantle.belongsTo(Atm, { foreignKey: 'installation_id' });
 
 module.exports = Dismantle;

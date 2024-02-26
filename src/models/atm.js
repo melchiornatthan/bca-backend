@@ -21,7 +21,7 @@ const Atm = sequelize.define('atm', {
     allowNull: false,
   },
   status: {
-    type: Sequelize.ENUM( 'active', 'dismantled'),
+    type: Sequelize.ENUM( 'pending', 'active', 'dismantled'),
     defaultValue: 'active',
     allowNull: false,
   },

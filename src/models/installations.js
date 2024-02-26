@@ -28,7 +28,7 @@ const Installation = sequelize.define('installations', {
     type: Sequelize.INTEGER,
   },
   status: {
-    type: Sequelize.ENUM('pending', 'approved', 'dismantled'),
+    type: Sequelize.ENUM('pending', 'approved'),
     defaultValue: 'pending',
     allowNull: false,
   },

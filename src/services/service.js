@@ -330,14 +330,14 @@ async function getProvidersCount() {
   try {
     // Retrieve a list of provider data from the database
     const allProviders = await Provider.findAll({ attributes: ["provider"] });
-    const installationCounts = await Installation.findAll({
+    const installationCounts = await Atm.findAll({
       attributes: [
         "provider",
         [sequelize.fn("count", sequelize.col("provider")), "count"],
       ],
       group: ["provider"],
       where: {
-        status: ["approved"],
+        status: ["active"],
       },
       raw: true,
     });
@@ -487,15 +487,16 @@ async function getInstallationInfoNew(location) {
     const providers = await Provider.findAll();
     const filteredProviders = await Promise.all(
       providers.map(async (provider) => {
-        const count = await Installation.count({
+        const count = await Atm.count({
           where: {
             provider_id: provider.id,
-            status: ["approved", "pending"],
+            status: ['pending', 'active'],
           },
         });
         return count < 10 ? provider.id : null;
       })
     );
+    
 
     const filteredProviderIds = filteredProviders.filter((id) => id !== null);
 
@@ -569,27 +570,26 @@ async function getInstallationInfoNew(location) {
     const province = findProvince.province;
 
     const providerCountPromises = samePrice.map((provider) =>
-      Installation.count({
+      Atm.count({
         where: {
           provider_id: provider.id_prov,
-          status: ["approved", "pending"],
+          status: ["pending", "active"],
           province,
         },
       })
     );
 
     const providerCounts = await Promise.all(providerCountPromises);
-
     const lowestCountProvince = Math.min(...providerCounts);
     const bestProviderProvinceIndex =
       providerCounts.indexOf(lowestCountProvince);
     const bestProviderProvince = samePrice[bestProviderProvinceIndex];
 
     const bestProviderCountPromises = samePrice.map((provider) =>
-      Installation.count({
+      Atm.count({
         where: {
           provider_id: provider.id_prov,
-          status: ["approved", "pending"],
+          status: ['pending', 'active'],
         },
       })
     );
@@ -649,11 +649,25 @@ async function createInstallation(body) {
       provider_id: 5,
     });
 
-   
+    const createAtm = await Atm.create({
+      createdAt: createdAt,
+      location : location,
+      address : address,
+      branch_pic : branch_pic,
+      area : area,
+      provider: "Telkomsel",
+      provider_id:  5,
+      area_id: installationInfo.bestProviderPrice.id_loc,
+      province: installationInfo.bestProviderDays.location.province,
+      status: "pending",
+    });
 
+   
+if(createAtm && installation){
     return {
       message: installation,
     };
+  }
   }
 
   // Fetch installation information based on the provided area
@@ -679,6 +693,19 @@ async function createInstallation(body) {
       price: installationInfo.bestProviderPrice.price,
       area_id: installationInfo.bestProviderPrice.id_loc,
       province: installationInfo.bestProviderDays.location.province,
+    });
+
+    const createAtm = await Atm.create({
+      createdAt: createdAt,
+      location : location,
+      address : address,
+      branch_pic : branch_pic,
+      area : area,
+      provider: installationInfo.bestProviderDays.provider.provider,
+      provider_id:  installationInfo.bestProviderDays.id_prov,
+      area_id: installationInfo.bestProviderPrice.id_loc,
+      province: installationInfo.bestProviderDays.location.province,
+      status: "pending",
     });
 
     return {
@@ -814,7 +841,9 @@ async function createDismantle(body) {
         }
       );
 
+      if(updateInstallation && dismantle){
       return getLocation;
+      }
     }
   } catch (error) {
     console.error("Error creating Dismantle:", error);
@@ -1117,25 +1146,24 @@ async function updateInstallation(id) {
       }
     );
     if (updateInstallation[0] === 1) {
-      const findInstallation = await Installation.findOne({
-        where: {
-          id,
-        },
-      });
-      const createAtm = await Atm.create({
-        createdAt: findInstallation.dataValues.createdAt,
-        location : findInstallation.dataValues.location,
-        address : findInstallation.dataValues.address,
-        branch_pic : findInstallation.dataValues.branch_pic,
-        area : findInstallation.dataValues.area,
-        provider: findInstallation.dataValues.provider,
-        provider_id: findInstallation.dataValues.provider_id,
-        area_id: findInstallation.dataValues.area_id,
-        province: findInstallation.dataValues.province,
-      });
-      if(createAtm){
-      return updateInstallation;
+      
+      const updateAtm = await Atm.update(
+        {
+          status: "active",
+        }
+        ,
+        {
+          where: {
+            status: "pending",
+            id: id,
+          },
+        }
+      );
+     
+      if(updateAtm){
+        return updateInstallation;
       }
+      
     }
   } catch (error) {
     console.error("Error updating installation list:", error);
@@ -1602,23 +1630,23 @@ async function overrideInstallation(body) {
         }
       );
 
-      const findInstallation = await Installation.findOne({
-        where: {
-          id,
-        },
-      });
-      const createAtm = await Atm.create({
-        createdAt: findInstallation.dataValues.createdAt,
-        location : findInstallation.dataValues.location,
-        address : findInstallation.dataValues.address,
-        branch_pic : findInstallation.dataValues.branch_pic,
-        area : findInstallation.dataValues.area,
-        provider: findInstallation.dataValues.provider,
-        provider_id: findInstallation.dataValues.provider_id,
-        area_id: findInstallation.dataValues.area_id,
-        province: findInstallation.dataValues.province,
-      });
-      if(createAtm){
+      const updateAtm = await Atm.update(
+        {
+          provider: newProvider.lowestPrice[0].provider.provider,
+          provider_id: id_prov,
+          status: "active",
+        }
+        ,
+        {
+          where: {
+            status: "pending",
+            id: id,
+          },
+        }
+      );
+     
+      
+      if(updateAtm && results){
       return results;
       }
     } else {

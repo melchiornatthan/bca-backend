@@ -4,6 +4,9 @@
 
 Introducing Memo Automation web application designed to streamline requests for installation, relocation, and dismantling entities that uses VSAT. Whether it's for installation, relocation, or dismantling, this platform automates the entire process. From initiating requests to vendor selection and report generation.
 
+## Documentation
+
+https://hackmd.io/@_ZfqOpYhTCq5xfvPo9Xb8g/ryjsBWeI6
 
 ## Installation
 
